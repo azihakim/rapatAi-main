@@ -38,16 +38,20 @@
                             <input type="date" class="form-control" id="tanggal" name="tanggal"
                                 placeholder="Pilih tanggal" required>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="full_day" name="full_day" value="1">
+                            <label class="form-check-label" for="full_day">Seharian (tanpa jam)</label>
+                        </div>
+                        <div class="mb-3" id="waktuMulaiGroup">
                             <label for="waktu_mulai" class="form-label">Waktu Mulai <span class="text-danger">*</span></label>
                             <input type="time" class="form-control" id="waktu_mulai" name="waktu_mulai"
                                 placeholder="Pilih waktu" required>
-                        </div>                        
-                        <div class="mb-3">
+                        </div>
+                        <div class="mb-3" id="waktuSelesaiGroup">
                             <label for="waktu_selesai" class="form-label">Waktu Selesai <span class="text-danger">*</span></label>
                             <input type="time" class="form-control" id="waktu_selesai" name="waktu_selesai"
                                 placeholder="Pilih waktu" required>
-                        </div>                        
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">

@@ -11,10 +11,25 @@ $(document).ready(function () {
     initTablePersonal();
 });
 
+function updateTimeInputsState() {
+    const isFullDay = $('#full_day').is(':checked');
+    $('#waktu_mulai, #waktu_selesai').prop('disabled', isFullDay);
+    $('#waktu_mulai, #waktu_selesai').prop('required', !isFullDay);
+    if (isFullDay) {
+        $('#waktu_mulai, #waktu_selesai').val('');
+    }
+}
+
+$(document).on('change', '#full_day', function () {
+    updateTimeInputsState();
+});
+
 $(document).on('click', '.addPersonal', function () {
     $('#modalPersonal').modal('show');
     $('.modal-title').text('Tambah Data Jadwal Pribadi');
     save_method = 'add';
+    $('#full_day').prop('checked', false);
+    updateTimeInputsState();
 });
 
 $(document).on('click', '.editKetersediaanPribadi', function () {
@@ -27,6 +42,8 @@ $('#modalPersonal').on('hidden.bs.modal', function () {
     $('#id').val('');
     $('.modal-title').text('');
     save_method = '';
+    $('#full_day').prop('checked', false);
+    updateTimeInputsState();
 
     var form = $('#formPersonal');
     form.validate().resetForm();
@@ -47,7 +64,7 @@ async function initTablePersonal() {
             { data: 'nama', name: 'nama' },
             { data: 'tanggal', name: 'tanggal' },
             { data: 'waktu_mulai', name: 'waktu_mulai' },
-            { data: 'waktu_selesai', name: 'waktu_selesai' },            
+            { data: 'waktu_selesai', name: 'waktu_selesai' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ],
         order: [[1, 'asc']],
@@ -107,12 +124,19 @@ function showSelectedData(id) {
         },
         success: function (response) {
             Swal.close();
-            const data = response.data || {};            
+            const data = response.data || {};
             $('#id').val(data.id || '');
             $('#tanggal').val(data.tanggal || '');
-            $('#waktu_mulai').val(data.waktu_mulai || '');            
-            $('#waktu_selesai').val(data.waktu_selesai || '');
-                    
+            $('#full_day').prop('checked', !!data.full_day);
+            if (!data.full_day) {
+                $('#waktu_mulai').val(data.waktu_mulai || '');
+                $('#waktu_selesai').val(data.waktu_selesai || '');
+            } else {
+                $('#waktu_mulai').val('');
+                $('#waktu_selesai').val('');
+            }
+            updateTimeInputsState();
+
             save_method = 'edit';
             $('#modalPersonal').modal('show');
             $('.modal-title').text('Edit Data Jadwal Pribadi');

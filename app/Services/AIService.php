@@ -13,17 +13,17 @@ class AIService
     public function __construct()
     {
         $this->client = new Client([
-            'base_uri' => 'https://generativelanguage.googleapis.com/',
             'timeout'  => 120,
         ]);
 
         $this->apiKey = env('AI_API_KEY');
+        $this->apiKeyGROQ = env('AI_API_KEYGROQ');
     }
 
     public function speechToText($filePath, $language = 'id', $continueText = null)
     {
         $audioData = base64_encode(file_get_contents($filePath));
-        
+
         if ($language === 'id') {
             $prompt = "Transkripkan audio ini hanya ke dalam teks Bahasa Indonesia. Jangan terjemahkan ke bahasa lain. Jangan tambahkan kata 'Translation'.";
         } else {
@@ -36,7 +36,7 @@ class AIService
                 : " Continue transcription after this text without repeating and keep using English:\n\n{$continueText}";
         }
 
-        $response = $this->client->post("v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}", [
+        $response = $this->client->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}", [
             'json' => [
                 'contents' => [[
                     'parts' => [
@@ -72,20 +72,52 @@ class AIService
             . "Gunakan gaya bahasa seperti asisten pribadi yang memberikan saran.\n\n"
             . json_encode($availabilities, JSON_PRETTY_PRINT);
 
-        $response = $this->client->post("v1beta/models/gemini-2.0-flash:generateContent?key={$this->apiKey}", [
-            'json' => [
-                'contents' => [[
-                    'parts' => [
-                        ["text" => $prompt]
-                    ]
-                ]]
-            ]
-        ]);
+        // Call Groq API (OpenAI-compatible endpoint)
+        try {
+            $groqBaseUrl = env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1');
+            $groqModel = env('GROQ_MODEL', 'mixtral-8x7b-32768');
 
-        $result = json_decode($response->getBody(), true);
+            $response = $this->client->post($groqBaseUrl . '/chat/completions', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->apiKeyGROQ,
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => [
+                    'model' => $groqModel,
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' => $prompt,
+                        ]
+                    ],
+                    'temperature' => 0.7,
+                    'max_tokens' => 1024,
+                ],
+                'timeout' => 120,
+            ]);
 
-        $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? "Tidak ada rekomendasi ditemukan.";
+            $result = json_decode($response->getBody(), true);
+            Log::info('AIService Groq response: ', (array)$result);
 
-        return $text;
+            // Extract text from OpenAI-compatible response format
+            $text = null;
+
+            if (isset($result['choices'][0]['message']['content'])) {
+                $text = $result['choices'][0]['message']['content'];
+            } elseif (isset($result['choices'][0]['text'])) {
+                $text = $result['choices'][0]['text'];
+            }
+
+            if (!$text) {
+                // Fallback: log full response for debugging
+                Log::warning('AIService Groq: No text extracted from response', $result);
+                $text = json_encode($result);
+            }
+
+            return $text;
+        } catch (\Exception $e) {
+            Log::error('AIService Groq request failed: ' . $e->getMessage());
+            return "Tidak ada rekomendasi ditemukan.";
+        }
     }
 }

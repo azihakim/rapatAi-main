@@ -63,7 +63,37 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'jabatan' => 'Sekretaris Daerah Provinsi Sumsel.',
             'komisi' => 'Sekretariat',
-            'nip' => '3344556677',            
+            'nip' => '3344556677',
+            'role_id' => 3
+        ]);
+
+        User::create([
+            'name' => 'Rina Kurniawati',
+            'email' => 'rina.kurniawati@example.com',
+            'password' => Hash::make('password'),
+            'jabatan' => 'Anggota Komisi I DPRD Provinsi SumSel.',
+            'komisi' => 'Komisi I',
+            'nip' => '4455667788',
+            'role_id' => 3
+        ]);
+
+        User::create([
+            'name' => 'Dedi Pratama',
+            'email' => 'dedi.pratama@example.com',
+            'password' => Hash::make('password'),
+            'jabatan' => 'Anggota Komisi II DPRD Provinsi SumSel.',
+            'komisi' => 'Komisi II',
+            'nip' => '5566778899',
+            'role_id' => 3
+        ]);
+
+        User::create([
+            'name' => 'Maya Sari',
+            'email' => 'maya.sari@example.com',
+            'password' => Hash::make('password'),
+            'jabatan' => 'Anggota Komisi III DPRD Provinsi SumSel.',
+            'komisi' => 'Komisi III',
+            'nip' => '6677889900',
             'role_id' => 3
         ]);
     }

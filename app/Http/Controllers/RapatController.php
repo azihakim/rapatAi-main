@@ -28,7 +28,7 @@ class RapatController extends Controller
             $rapat = Rapat::latest()->get();
             return datatables()->of($rapat)
                 ->addIndexColumn()
-                ->addColumn('tanggal_rapat', function ($row) {                    
+                ->addColumn('tanggal_rapat', function ($row) {
                     Carbon::setLocale('id');
                     return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
                 })
@@ -50,16 +50,16 @@ class RapatController extends Controller
                 ->addColumn('action', function ($row) {
                     $user = Auth::user();
                     $btn = '';
-                    
+
                     if ($user && $user->role && $user->role->name === 'sekretariat') {
                         $btn .= '<button type="button" class="btn btn-primary btn-sm editRapat" data-id="' . $row->id . '">Edit</button>';
                         $btn .= ' <button type="button" class="deleteRapat btn btn-danger btn-sm" data-id="' . $row->id . '">Delete</button>';
                     }
-                    
+
                     if ($user && $user->role && $user->role->name === 'pimpinan' && $row->status == 1) {
                         $btn .= '<button class="btn btn-info btn-detail btn-sm approveDetail" data-toggle="modal" data-target="#suratModal" data-id="' . $row->id . '">
                                 <i class="fas fa-eye"></i> Detail
-                            </button>';                
+                            </button>';
                     }
 
                     return $btn;
@@ -110,7 +110,7 @@ class RapatController extends Controller
             'message' => 'Rapat dengan judul "' . $rapat->judul . '" telah diajukan dan menunggu persetujuan.',
             'type' => 'info',
         ]);
-        
+
         $pimpinanUsers = User::whereHas('role', function($query) {
             $query->where('name', 'pimpinan');
         })->get();
@@ -121,7 +121,7 @@ class RapatController extends Controller
                 'read_at' => null,
             ]);
         }
-        
+
 
         // Attach peserta rapat
         foreach ($request->peserta as $userId) {
@@ -240,10 +240,13 @@ class RapatController extends Controller
                 return [
                     'nama' => $user->name,
                     'jadwal' => optional($user->ketersediaanPribadi)->map(function ($k) {
+                        $mulai = $k->full_day ? '00:00' : $k->waktu_mulai;
+                        $selesai = $k->full_day ? '23:59' : $k->waktu_selesai;
                         return [
                             'tanggal' => $k->tanggal,
-                            'mulai' => $k->waktu_mulai,
-                            'selesai' => $k->waktu_selesai
+                            'mulai' => $mulai,
+                            'selesai' => $selesai,
+                            'full_day' => (bool) $k->full_day
                         ];
                     })->toArray()
                 ];
@@ -274,10 +277,13 @@ class RapatController extends Controller
                 'id' => $user->id,
                 'nama' => $user->name,
                 'jadwal' => $user->ketersediaanPribadi->map(function($k) {
+                    $mulai = $k->full_day ? '00:00' : $k->waktu_mulai;
+                    $selesai = $k->full_day ? '23:59' : $k->waktu_selesai;
                     return [
                         'tanggal' => $k->tanggal,
-                        'mulai' => $k->waktu_mulai,
-                        'selesai' => $k->waktu_selesai
+                        'mulai' => $mulai,
+                        'selesai' => $selesai,
+                        'full_day' => (bool) $k->full_day
                     ];
                 })
             ];

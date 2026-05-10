@@ -36,7 +36,7 @@ class ApprovalController extends Controller
                 })->value('nip'),
                 'agenda' => $rapat->deskripsi ?? 'Agenda akan disampaikan dalam rapat',
                 'tanggalRapat' => $this->formatTanggalIndonesia($rapat->tanggal),
-                'waktu' => date('H.i', strtotime($rapat->waktu)) . ' WIB s.d Selesai',
+                'waktu' => date('H:i', strtotime($rapat->waktu)) . ' WIB s.d Selesai',
                 'tempat' => $rapat->lokasi ?? 'Ruang Rapat DPRD Provinsi Sumatera Selatan',
                 'penandatangan' => User::with('role')->whereHas('role', function ($query) {
                     $query->where('name', 'pimpinan');
@@ -62,7 +62,7 @@ class ApprovalController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|in:2,3', // 2 = approved, 3 = rejected                
+                'status' => 'required|in:2,3', // 2 = approved, 3 = rejected
             ]);
 
             DB::beginTransaction();
@@ -217,7 +217,7 @@ class ApprovalController extends Controller
             ]);
 
             $statusText = $validated['status'] == 2 ? 'disetujui' : 'ditolak';
-            
+
             $notif = Notification::create([
                 'title'   => $validated['status'] == 2 ? 'Notulensi Disetujui' : 'Notulensi Ditolak',
                 'message' => $validated['status'] == 2
@@ -237,7 +237,7 @@ class ApprovalController extends Controller
                 })
                 ->pluck('id');
             $userIds = $userIds->merge($sekretariatUsers)->unique();
-            
+
             $attachData = $userIds->mapWithKeys(fn($id) => [
                 $id => ['is_read' => false, 'read_at' => null]
             ]);
@@ -262,7 +262,7 @@ class ApprovalController extends Controller
     }
 
     public function viewApprovalLogistik()
-    {           
+    {
         return view('approval.approve-logistik');
     }
 
@@ -282,7 +282,7 @@ class ApprovalController extends Controller
             ]);
 
             $statusText = $validated['status'] == 'disetujui' ? 'disetujui' : 'ditolak';
-            
+
             $notif = Notification::create([
                 'title'   => $validated['status'] == 'disetujui' ? 'Pengajuan Logistik Disetujui' : 'Pengajuan Logistik Ditolak',
                 'message' => $validated['status'] == 'disetujui'

@@ -28,9 +28,15 @@ class KetersediaanPribadiController extends Controller
                     return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
                 })
                 ->addColumn('waktu_mulai', function ($row) {
+                    if ($row->full_day) {
+                        return 'Seharian';
+                    }
                     return date('H:i', strtotime($row->waktu_mulai));
                 })
                 ->addColumn('waktu_selesai', function ($row) {
+                    if ($row->full_day) {
+                        return 'Seharian';
+                    }
                     return date('H:i', strtotime($row->waktu_selesai));
                 })
                 ->addColumn('action', function ($row) {
@@ -47,17 +53,25 @@ class KetersediaanPribadiController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $fullDay = $request->boolean('full_day');
+        $rules = [
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'required',
-            'waktu_selesai' => 'required|after:waktu_mulai',
-        ]);
+        ];
+        if (!$fullDay) {
+            $rules['waktu_mulai'] = 'required|date_format:H:i';
+            $rules['waktu_selesai'] = 'required|date_format:H:i|after:waktu_mulai';
+        }
+        $request->validate($rules);
+
+        $waktuMulai = $fullDay ? '00:00' : $request->waktu_mulai;
+        $waktuSelesai = $fullDay ? '23:59' : $request->waktu_selesai;
 
         KetersediaanPribadi::create([
             'user_id' => Auth::user()->id,
             'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai,
-            'waktu_selesai' => $request->waktu_selesai,
+            'waktu_mulai' => $waktuMulai,
+            'waktu_selesai' => $waktuSelesai,
+            'full_day' => $fullDay,
         ]);
 
         return response()->json([
@@ -84,18 +98,26 @@ class KetersediaanPribadiController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
+        $fullDay = $request->boolean('full_day');
+        $rules = [
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'required',
-            'waktu_selesai' => 'required|after:waktu_mulai',
-        ]);
+        ];
+        if (!$fullDay) {
+            $rules['waktu_mulai'] = 'required|date_format:H:i';
+            $rules['waktu_selesai'] = 'required|date_format:H:i|after:waktu_mulai';
+        }
+        $request->validate($rules);
+
+        $waktuMulai = $fullDay ? '00:00' : $request->waktu_mulai;
+        $waktuSelesai = $fullDay ? '23:59' : $request->waktu_selesai;
 
         $personal = KetersediaanPribadi::find($id);
         if ($personal) {
             $personal->update([
                 'tanggal' => $request->tanggal,
-                'waktu_mulai' => $request->waktu_mulai,
-                'waktu_selesai' => $request->waktu_selesai,
+                'waktu_mulai' => $waktuMulai,
+                'waktu_selesai' => $waktuSelesai,
+                'full_day' => $fullDay,
             ]);
 
             return response()->json([

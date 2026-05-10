@@ -40,7 +40,11 @@ function fetchJadwalPeserta() {
                     html += `<b>${p.nama}</b><ul>`;
                     if (p.jadwal.length > 0) {
                         p.jadwal.forEach(function(j) {
-                            html += `<li>${j.tanggal} (${j.mulai} - ${j.selesai})</li>`;
+                            if (j.full_day) {
+                                html += `<li>${j.tanggal} (Seharian)</li>`;
+                            } else {
+                                html += `<li>${j.tanggal} (${j.mulai} - ${j.selesai})</li>`;
+                            }
                         });
                     } else {
                         html += '<li><em>Tidak ada jadwal tersedia di tanggal ini</em></li>';
