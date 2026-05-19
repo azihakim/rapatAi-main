@@ -1,0 +1,491 @@
+Dokumentasi Test Case Flow Sistem Rapat AI
+=========================================
+
+Scope
+-----
+Dokumentasi ini berisi test case realistis untuk menguji alur utama sistem:
+- Login dan akses berbasis role
+- Dashboard dan pengelolaan rapat
+- Rekomendasi jadwal rapat berdasarkan ketersediaan peserta
+- Pengajuan dan approval rapat
+- Pengajuan dan approval notulensi
+- Pengajuan dan approval logistik
+- Ketersediaan pribadi peserta
+- Notifikasi
+- Tindak lanjut rapat
+- Profile dan manajemen user
+
+Asumsi role yang dipakai
+------------------------
+- Admin: role_id = 1, akses penuh ke data ketersediaan pribadi dan user management.
+- Sekretariat: membuat rapat, mengelola notulensi, logistik, dan approval tertentu.
+- Pimpinan: menyetujui/menolak rapat dan menerima notifikasi pengajuan.
+- Anggota: mengisi ketersediaan pribadi, melihat rapat yang diikuti, dan menerima notifikasi.
+
+Data uji yang disarankan
+------------------------
+- User A: sekretariat
+- User B: pimpinan
+- User C: anggota
+- User D: anggota tambahan
+- Rapat contoh: "Rapat Evaluasi Kinerja Triwulan"
+- Tanggal rapat: 2026-05-25
+- Waktu rapat: 10:00
+- Lokasi: "Ruang Rapat Utama"
+- Jenis rapat: rapat_komisi
+- Status rapat: 1 = pengajuan, 2 = disetujui, 3 = ditolak
+
+Test Case Utama
+---------------
+
+TC-01 - Login berhasil dan masuk ke dashboard
+Tujuan:
+- Memastikan user valid bisa masuk ke sistem dan diarahkan ke dashboard.
+Langkah:
+1. Buka halaman login.
+2. Masukkan email dan password yang valid.
+3. Klik tombol login.
+Ekspektasi:
+- User berhasil login.
+- Sistem mengarahkan ke dashboard.
+- Menu yang tampil sesuai role user.
+
+TC-02 - Login gagal dengan kredensial salah
+Tujuan:
+- Memastikan validasi login bekerja.
+Langkah:
+1. Buka halaman login.
+2. Masukkan email valid tetapi password salah.
+3. Klik login.
+Ekspektasi:
+- Login ditolak.
+- Pesan error ditampilkan.
+- User tetap berada di halaman login.
+
+TC-03 - Akses halaman tanpa login
+Tujuan:
+- Memastikan semua route auth tidak bisa diakses tanpa sesi login.
+Langkah:
+1. Buka URL dashboard atau modul internal langsung dari browser.
+2. Pastikan session belum login.
+Ekspektasi:
+- Sistem mengarahkan ke halaman login.
+- Data internal tidak tampil.
+
+TC-04 - Dashboard menampilkan rapat yang sudah disetujui
+Tujuan:
+- Memastikan kalender dashboard hanya menampilkan rapat dengan status disetujui.
+Langkah:
+1. Login sebagai user yang berhak melihat dashboard.
+2. Buka halaman dashboard.
+3. Periksa event kalender.
+Ekspektasi:
+- Hanya rapat berstatus disetujui yang muncul.
+- Title, tanggal, lokasi, kategori, dan peserta tampil sesuai data.
+
+TC-05 - Sekretariat membuat pengajuan rapat baru
+Tujuan:
+- Menguji proses pembuatan rapat dari awal.
+Langkah:
+1. Login sebagai sekretariat.
+2. Buka modul rapat.
+3. Klik tambah rapat.
+4. Isi tanggal, waktu, lokasi, judul, deskripsi, jenis rapat, hal, sifat, penandatangan, dan minimal 1 peserta.
+5. Simpan pengajuan.
+Ekspektasi:
+- Rapat tersimpan dengan status pengajuan.
+- Nomor surat otomatis terbentuk.
+- Notifikasi pengajuan rapat dikirim ke user pimpinan.
+- Peserta rapat tersimpan sesuai pilihan.
+
+TC-06 - Validasi rapat gagal jika data wajib kosong
+Tujuan:
+- Memastikan field wajib divalidasi.
+Langkah:
+1. Buka form tambah rapat.
+2. Kosongkan tanggal, judul, peserta, atau penandatangan.
+3. Simpan.
+Ekspektasi:
+- Sistem menolak simpanan.
+- Pesan validasi muncul pada field yang kosong.
+
+TC-07 - Detail rapat dapat dibuka oleh pimpinan saat status pengajuan
+Tujuan:
+- Memastikan pimpinan dapat melihat detail surat undangan rapat yang menunggu persetujuan.
+Langkah:
+1. Login sebagai pimpinan.
+2. Buka menu approval rapat.
+3. Pilih salah satu pengajuan rapat.
+4. Buka detail surat undangan.
+Ekspektasi:
+- Detail surat tampil lengkap.
+- Data nomor surat, perihal, acara, tanggal, waktu, tempat, dan penandatangan muncul.
+
+TC-08 - Pimpinan menyetujui rapat
+Tujuan:
+- Menguji alur approval rapat.
+Langkah:
+1. Login sebagai pimpinan.
+2. Buka daftar approval rapat.
+3. Pilih rapat status pengajuan.
+4. Klik setujui.
+Ekspektasi:
+- Status rapat berubah menjadi disetujui.
+- Notifikasi terkirim ke peserta dan sekretariat.
+- Rapat muncul di dashboard kalender.
+
+TC-09 - Pimpinan menolak rapat
+Tujuan:
+- Menguji skenario penolakan rapat.
+Langkah:
+1. Login sebagai pimpinan.
+2. Buka pengajuan rapat.
+3. Klik tolak.
+Ekspektasi:
+- Status rapat berubah menjadi ditolak.
+- Notifikasi penolakan terkirim ke sekretariat.
+- Rapat tidak muncul pada kalender dashboard.
+
+TC-10 - Rapat tidak bisa diakses oleh user non-anggota pada detail notulensi
+Tujuan:
+- Memastikan akses notulensi dibatasi peserta rapat.
+Langkah:
+1. Login sebagai user yang bukan peserta rapat.
+2. Buka detail notulensi rapat tertentu.
+Ekspektasi:
+- Sistem menolak akses.
+- Pesan bahwa user tidak berhak mengakses notulensi muncul.
+
+TC-11 - Sekretariat membuat notulensi draft
+Tujuan:
+- Menguji pembuatan notulensi dari rapat yang diikuti user.
+Langkah:
+1. Login sebagai sekretariat atau peserta rapat.
+2. Buka modul notulensi.
+3. Pilih rapat yang memang diikuti.
+4. Isi isi notulensi dan unggah file bila diperlukan.
+5. Simpan.
+Ekspektasi:
+- Notulensi tersimpan dengan status draft.
+- File tersimpan di storage publik jika diunggah.
+
+TC-12 - Validasi notulensi gagal jika rapat atau isi kosong
+Tujuan:
+- Memastikan validasi notulensi berjalan.
+Langkah:
+1. Buka form tambah notulensi.
+2. Kosongkan rapat atau isi.
+3. Simpan.
+Ekspektasi:
+- Sistem menolak simpan.
+- Pesan validasi muncul.
+
+TC-13 - Update notulensi dengan file baru
+Tujuan:
+- Memastikan file lama diganti saat upload file baru.
+Langkah:
+1. Buka notulensi yang sudah ada.
+2. Update isi notulensi.
+3. Upload file audio atau dokumen baru.
+4. Simpan perubahan.
+Ekspektasi:
+- Data notulensi terbarui.
+- File lama terhapus dari storage jika sebelumnya ada.
+- File baru tersimpan.
+
+TC-14 - Approval notulensi oleh pihak berwenang
+Tujuan:
+- Menguji status notulensi setelah review.
+Langkah:
+1. Login sebagai user yang punya akses approval.
+2. Buka daftar approval notulen.
+3. Buka detail notulen.
+4. Set status menjadi disetujui atau ditolak.
+Ekspektasi:
+- Status notulensi berubah sesuai keputusan.
+- Notifikasi terkirim ke peserta rapat dan sekretariat.
+
+TC-15 - Transkripsi audio ke teks berhasil
+Tujuan:
+- Menguji endpoint speech-to-text.
+Langkah:
+1. Upload file audio valid dengan format mp3, wav, atau aac.
+2. Sertakan optional continue_text jika diperlukan.
+3. Jalankan proses transkripsi.
+Ekspektasi:
+- Sistem mengembalikan hasil transkripsi.
+- Response sukses dan teks dapat dipakai untuk draft notulensi.
+
+TC-16 - Transkripsi audio ditolak jika format file salah
+Tujuan:
+- Memastikan file invalid tidak diproses.
+Langkah:
+1. Upload file selain mp3, wav, atau aac.
+2. Jalankan transkripsi.
+Ekspektasi:
+- Sistem menolak file.
+- Pesan validasi format muncul.
+
+TC-17 - User mengisi ketersediaan pribadi multi-slot
+Tujuan:
+- Menguji input ketersediaan yang lebih dari satu slot waktu.
+Langkah:
+1. Login sebagai anggota.
+2. Buka menu ketersediaan pribadi.
+3. Tambahkan dua slot untuk tanggal yang sama.
+4. Simpan.
+Ekspektasi:
+- Semua slot tersimpan.
+- Data tampil di daftar ketersediaan pribadi milik user.
+
+TC-18 - Ketersediaan pribadi ditolak jika waktu selesai lebih kecil dari waktu mulai
+Tujuan:
+- Memastikan validasi waktu konsisten.
+Langkah:
+1. Buka form ketersediaan pribadi.
+2. Isi waktu mulai 14:00 dan waktu selesai 13:00.
+3. Simpan.
+Ekspektasi:
+- Sistem menolak input.
+- Pesan bahwa waktu selesai harus lebih besar dari waktu mulai muncul.
+
+TC-19 - Admin melihat seluruh ketersediaan pribadi
+Tujuan:
+- Memastikan admin dapat melihat data seluruh user.
+Langkah:
+1. Login sebagai admin.
+2. Buka halaman ketersediaan pribadi.
+3. Lihat data tabel.
+Ekspektasi:
+- Semua data user tampil.
+- Tabel memuat nama, tanggal, waktu mulai, dan waktu selesai.
+
+TC-20 - Anggota hanya melihat ketersediaan miliknya sendiri
+Tujuan:
+- Menguji filter data berdasarkan user login.
+Langkah:
+1. Login sebagai anggota.
+2. Buka halaman ketersediaan pribadi.
+3. Periksa data yang tampil.
+Ekspektasi:
+- Hanya data milik user tersebut yang tampil.
+
+TC-21 - Sistem memberi rekomendasi jadwal rapat berdasarkan ketersediaan peserta
+Tujuan:
+- Menguji endpoint rekomendasi jadwal rapat.
+Langkah:
+1. Login sebagai sekretariat.
+2. Pilih beberapa peserta rapat.
+3. Isi tanggal dan durasi rapat.
+4. Jalankan rekomendasi jadwal.
+Ekspektasi:
+- Sistem mengembalikan rekomendasi jadwal dari AI.
+- Data ketersediaan tiap peserta menjadi dasar rekomendasi.
+
+TC-22 - Jadwal peserta ditampilkan per tanggal yang dipilih
+Tujuan:
+- Menguji endpoint jadwal peserta tanpa AI.
+Langkah:
+1. Pilih minimal 2 peserta.
+2. Pilih tanggal tertentu.
+3. Panggil jadwal peserta.
+Ekspektasi:
+- Sistem menampilkan daftar peserta beserta slot ketersediaannya pada tanggal tersebut.
+
+TC-23 - Sekretariat membuat pengajuan logistik dengan beberapa detail item
+Tujuan:
+- Menguji alur pengajuan logistik end-to-end.
+Langkah:
+1. Login sebagai sekretariat.
+2. Buka modul logistik.
+3. Pilih rapat yang sesuai.
+4. Isi jenis pengajuan, keterangan, dan minimal satu detail item.
+5. Simpan.
+Ekspektasi:
+- Pengajuan logistik tersimpan.
+- Detail item tersimpan sesuai input.
+- Data pengguna pengaju tercatat otomatis.
+
+TC-24 - Pengajuan logistik gagal jika detail item kosong
+Tujuan:
+- Memastikan detail logistik wajib diisi.
+Langkah:
+1. Buka form pengajuan logistik.
+2. Isi header pengajuan tapi kosongkan detail.
+3. Simpan.
+Ekspektasi:
+- Sistem menolak input.
+- Pesan validasi untuk detail muncul.
+
+TC-25 - Update pengajuan logistik mengganti semua detail lama
+Tujuan:
+- Menguji perilaku update logistik.
+Langkah:
+1. Buka pengajuan logistik yang sudah ada.
+2. Ubah jenis pengajuan dan detail item.
+3. Simpan perubahan.
+Ekspektasi:
+- Data utama terupdate.
+- Semua detail lama terhapus dan diganti detail baru.
+
+TC-26 - Approval logistik disetujui
+Tujuan:
+- Menguji alur approval logistik.
+Langkah:
+1. Login sebagai approver.
+2. Buka halaman approval logistik.
+3. Set status menjadi disetujui.
+Ekspektasi:
+- Status logistik berubah menjadi disetujui.
+- Notifikasi terkirim ke peserta rapat dan sekretariat.
+
+TC-27 - Approval logistik ditolak
+Tujuan:
+- Menguji alur penolakan logistik.
+Langkah:
+1. Buka pengajuan logistik.
+2. Set status menjadi ditolak.
+Ekspektasi:
+- Status logistik berubah menjadi ditolak.
+- Notifikasi penolakan terkirim.
+
+TC-28 - Notification center menampilkan notifikasi terbaru
+Tujuan:
+- Memastikan daftar notifikasi sesuai urutan terbaru.
+Langkah:
+1. Login sebagai user yang menerima notifikasi.
+2. Buka halaman notifikasi.
+3. Ambil data JSON jika memakai AJAX.
+Ekspektasi:
+- Notifikasi tampil dari yang terbaru.
+- Informasi title, message, type, read status, dan waktu tampil benar.
+
+TC-29 - Mark single notification as read
+Tujuan:
+- Menguji penandaan satu notifikasi sebagai dibaca.
+Langkah:
+1. Buka daftar notifikasi.
+2. Pilih satu notifikasi yang belum dibaca.
+3. Klik tandai sudah dibaca.
+Ekspektasi:
+- Status notifikasi berubah menjadi dibaca.
+- read_at terisi.
+
+TC-30 - Mark all notifications as read
+Tujuan:
+- Menguji penandaan semua notifikasi sekaligus.
+Langkah:
+1. Buka notification center.
+2. Klik mark all as read.
+Ekspektasi:
+- Semua notifikasi belum dibaca berubah menjadi dibaca.
+- Jumlah unread menjadi nol.
+
+TC-31 - Tindak lanjut rapat berhasil ditambahkan
+Tujuan:
+- Menguji pembuatan action item hasil rapat.
+Langkah:
+1. Login sebagai user yang berhak.
+2. Buka modul tindak lanjut rapat.
+3. Isi rapat, deskripsi, penanggung jawab, batas waktu, status, dan progress.
+4. Simpan.
+Ekspektasi:
+- Data tindak lanjut tersimpan.
+- Redirect kembali ke daftar dengan pesan sukses.
+
+TC-32 - Tindak lanjut rapat gagal jika progress di luar 0-100
+Tujuan:
+- Memastikan progress dibatasi.
+Langkah:
+1. Buka form tindak lanjut rapat.
+2. Isi progress -10 atau 120.
+3. Simpan.
+Ekspektasi:
+- Sistem menolak input.
+- Validasi progress muncul.
+
+TC-33 - Edit profile berhasil
+Tujuan:
+- Memastikan user dapat memperbarui profil.
+Langkah:
+1. Login sebagai user aktif.
+2. Buka halaman profile.
+3. Ubah data yang diperbolehkan.
+4. Simpan.
+Ekspektasi:
+- Profil terbarui.
+- Data baru tampil setelah refresh.
+
+TC-34 - Hapus akun profile
+Tujuan:
+- Menguji penghapusan akun user sendiri.
+Langkah:
+1. Buka halaman profile.
+2. Pilih hapus akun.
+3. Konfirmasi.
+Ekspektasi:
+- Akun terhapus.
+- Session user berakhir.
+- User diarahkan keluar dari sistem.
+
+TC-35 - Manajemen user oleh admin
+Tujuan:
+- Menguji CRUD user management.
+Langkah:
+1. Login sebagai admin.
+2. Tambah user baru dengan role tertentu.
+3. Ubah role atau data user.
+4. Hapus user jika diperlukan.
+Ekspektasi:
+- User baru tersimpan.
+- Update berhasil.
+- User dapat dihapus dari sistem.
+
+Skenario End-to-End yang Paling Realistis
+----------------------------------------
+
+Skenario E2E-01 - Pengajuan rapat sampai approval dan notifikasi
+1. Sekretariat login.
+2. Sekretariat membuat rapat baru dengan peserta dari role anggota dan penandatangan role pimpinan.
+3. Sistem membuat nomor surat dan mengirim notifikasi ke pimpinan.
+4. Pimpinan membuka approval rapat.
+5. Pimpinan menyetujui rapat.
+6. Status rapat berubah menjadi disetujui.
+7. Rapat muncul di dashboard kalender.
+8. Peserta rapat menerima notifikasi undangan.
+
+Skenario E2E-02 - Rapat disetujui, notulensi dibuat, lalu di-approve
+1. Peserta rapat login dan membuat notulensi draft dari rapat yang diikuti.
+2. Peserta mengunggah file pendukung atau audio jika ada.
+3. Notulensi disimpan dengan status draft.
+4. Approver membuka approval notulen.
+5. Approver menyetujui notulensi.
+6. Notifikasi approval notulen terkirim ke peserta dan sekretariat.
+
+Skenario E2E-03 - Pengajuan logistik dari rapat yang sama
+1. Sekretariat membuka rapat yang sudah disetujui.
+2. Sekretariat mengajukan logistik dengan beberapa item detail.
+3. Approver memverifikasi dan menyetujui atau menolak pengajuan.
+4. Peserta dan sekretariat menerima notifikasi hasil approval.
+
+Skenario E2E-04 - Penentuan jadwal rapat berdasarkan ketersediaan
+1. Setiap peserta mengisi ketersediaan pribadi pada tanggal yang sama.
+2. Sekretariat memilih peserta dan tanggal rapat.
+3. Sistem menampilkan jadwal peserta.
+4. Sekretariat meminta rekomendasi AI berdasarkan durasi rapat.
+5. Sistem memberikan kandidat jadwal terbaik.
+
+Checklist Verifikasi Hasil
+--------------------------
+- Semua CRUD utama menghasilkan response sukses atau pesan error yang jelas.
+- Validasi input wajib ditolak pada data kosong atau format salah.
+- Hak akses berbasis role bekerja di modul ketersediaan, notulensi, dan approval.
+- Notifikasi masuk ke user target sesuai jenis aksi.
+- Data relasi rapat, peserta, notulensi, dan logistik tetap konsisten setelah update dan delete.
+
+Catatan Pengujian
+-----------------
+- Uji dengan minimal 1 akun per role untuk memastikan filter akses benar.
+- Uji setidaknya 1 skenario data valid dan 1 skenario data invalid per modul.
+- Jika AI service tidak aktif, tandai hasil rekomendasi jadwal dan transkripsi sebagai dependency eksternal.
+- Untuk pengujian manual, prioritaskan skenario yang paling sering dipakai sekretariat, pimpinan, dan anggota.

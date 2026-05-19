@@ -20,7 +20,7 @@ class RapatController extends Controller
             $query->where('name', 'anggota');
         })->with('role')->get();
 
-        $pendatanganRapat = User::with('role')->whereHas('role', function($query) {
+        $pendatanganRapat = User::with('role')->whereHas('role', function ($query) {
             $query->where('name', 'pimpinan');
         })->get();
 
@@ -33,7 +33,18 @@ class RapatController extends Controller
                     return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
                 })
                 ->addColumn('waktu_rapat', function ($row) {
-                    return date('H:i', strtotime($row->waktu)) . ' WIB s.d Selesai';
+                    $jamMulai = $row->jam_mulai ?? $row->waktu;
+                    $jamSelesai = $row->jam_selesai;
+
+                    if ($jamMulai && $jamSelesai) {
+                        return date('H:i', strtotime($jamMulai)) . ' - ' . date('H:i', strtotime($jamSelesai)) . ' WIB';
+                    }
+
+                    if ($jamMulai) {
+                        return date('H:i', strtotime($jamMulai)) . ' WIB';
+                    }
+
+                    return '-';
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == 1) {
@@ -57,7 +68,7 @@ class RapatController extends Controller
                     }
 
                     if ($user && $user->role && $user->role->name === 'pimpinan' && $row->status == 1) {
-                        $btn .= '<button class="btn btn-info btn-detail btn-sm approveDetail" data-toggle="modal" data-target="#suratModal" data-id="' . $row->id . '">
+                        $btn .= '<button type="button" class="btn btn-info btn-detail btn-sm approveDetail" data-id="' . $row->id . '">
                                 <i class="fas fa-eye"></i> Detail
                             </button>';
                     }
@@ -76,7 +87,8 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'waktu' => 'required',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'required|string|max:255',
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
@@ -93,7 +105,9 @@ class RapatController extends Controller
 
         $rapat = Rapat::create([
             'tanggal' => $request->tanggal,
-            'waktu' => $request->waktu,
+            'waktu' => $request->jam_mulai,
+            'jam_mulai' => $request->jam_mulai,
+            'jam_selesai' => $request->jam_selesai,
             'lokasi' => $request->lokasi,
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
@@ -111,7 +125,7 @@ class RapatController extends Controller
             'type' => 'info',
         ]);
 
-        $pimpinanUsers = User::whereHas('role', function($query) {
+        $pimpinanUsers = User::whereHas('role', function ($query) {
             $query->where('name', 'pimpinan');
         })->get();
 
@@ -158,7 +172,8 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'waktu' => 'required',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'required|string|max:255',
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
@@ -174,7 +189,9 @@ class RapatController extends Controller
             $rapat = Rapat::findOrFail($id);
             $rapat->update([
                 'tanggal' => $request->tanggal,
-                'waktu' => $request->waktu,
+                'waktu' => $request->jam_mulai,
+                'jam_mulai' => $request->jam_mulai,
+                'jam_selesai' => $request->jam_selesai,
                 'lokasi' => $request->lokasi,
                 'judul' => $request->judul,
                 'deskripsi' => $request->deskripsi,
@@ -232,7 +249,7 @@ class RapatController extends Controller
         ]);
 
         $availabilities = User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function($q) use ($request) {
+            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
                 $q->where('tanggal', $request->tanggal);
             }])
             ->get()
@@ -240,13 +257,10 @@ class RapatController extends Controller
                 return [
                     'nama' => $user->name,
                     'jadwal' => optional($user->ketersediaanPribadi)->map(function ($k) {
-                        $mulai = $k->full_day ? '00:00' : $k->waktu_mulai;
-                        $selesai = $k->full_day ? '23:59' : $k->waktu_selesai;
                         return [
                             'tanggal' => $k->tanggal,
-                            'mulai' => $mulai,
-                            'selesai' => $selesai,
-                            'full_day' => (bool) $k->full_day
+                            'mulai' => $k->waktu_mulai,
+                            'selesai' => $k->waktu_selesai
                         ];
                     })->toArray()
                 ];
@@ -268,22 +282,19 @@ class RapatController extends Controller
         ]);
 
         $users = \App\Models\User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function($q) use ($request) {
+            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
                 $q->where('tanggal', $request->tanggal);
             }])->get();
 
-        $result = $users->map(function($user) {
+        $result = $users->map(function ($user) {
             return [
                 'id' => $user->id,
                 'nama' => $user->name,
-                'jadwal' => $user->ketersediaanPribadi->map(function($k) {
-                    $mulai = $k->full_day ? '00:00' : $k->waktu_mulai;
-                    $selesai = $k->full_day ? '23:59' : $k->waktu_selesai;
+                'jadwal' => $user->ketersediaanPribadi->map(function ($k) {
                     return [
                         'tanggal' => $k->tanggal,
-                        'mulai' => $mulai,
-                        'selesai' => $selesai,
-                        'full_day' => (bool) $k->full_day
+                        'mulai' => $k->waktu_mulai,
+                        'selesai' => $k->waktu_selesai
                     ];
                 })
             ];
