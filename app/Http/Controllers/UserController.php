@@ -33,6 +33,7 @@ class UserController extends Controller
             'jabatan' => 'nullable|string|max:255',
             'foto_ttd' => 'nullable|string|max:255',
             'nip' => 'nullable|string|max:255',
+            'komisi' => 'nullable|string|max:255',
         ]);
         $validated['password'] = Hash::make($validated['password']);
         User::create($validated);
@@ -61,6 +62,7 @@ class UserController extends Controller
             'jabatan' => 'nullable|string|max:255',
             'foto_ttd' => 'nullable|string|max:255',
             'nip' => 'nullable|string|max:255',
+            'komisi' => 'nullable|string|max:255',
         ]);
         if ($validated['password']) {
             $validated['password'] = Hash::make($validated['password']);
