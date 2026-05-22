@@ -35,7 +35,7 @@
 						<input type="text" name="id" id="id" hidden>
 						<div class="alert alert-info py-2 mb-3">
 							Tambahkan satu atau beberapa tanggal. Setiap tanggal bisa memiliki lebih dari satu rentang jam.
-							Jika seharian dicentang, jam akan otomatis menjadi 00:00 sampai 23:59.
+							Jika seharian dicentang, jam akan otomatis menjadi 08:00 sampai 16:00.
 						</div>
 						<div id="personalRows"></div>
 						<div class="d-flex justify-content-end mt-3">

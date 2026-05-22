@@ -7,8 +7,8 @@ let personalSlotIndex = 0;
 
 const defaultStartTime = "08:00";
 const defaultEndTime = "17:00";
-const fullDayStartTime = "00:00";
-const fullDayEndTime = "23:59";
+const fullDayStartTime = "08:00";
+const fullDayEndTime = "16:00";
 
 jQuery(function () {
     myData._token = $('meta[name="csrf-token"]').attr("content");
