@@ -14,13 +14,16 @@ class NotulensiController extends Controller
 {
     public function index()
     {
-
-        // Ambil rapat yang diikuti user (sebagai peserta)
         $user = Auth::user();
         $rapatIds = [];
-        if ($user) {
+        
+        // Jika user adalah role_id 2, ambil semua notulensi
+        if ($user && $user->role_id == 2) {
+            $rapatIds = Rapat::pluck('id')->toArray();
+        } elseif ($user) {
             $rapatIds = DB::table('peserta_rapats')->where('user_id', $user->id)->pluck('rapat_id')->toArray();
         }
+        
         $rapat = Rapat::whereIn('id', $rapatIds)->get();
 
         if (Request()->ajax()) {
