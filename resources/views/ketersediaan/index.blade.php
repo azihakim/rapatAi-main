@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Ketersediaan Pribadi')
+@section('title', 'Kegiatan Anggota')
 @section('content')
 	<div class="card">
 		<div class="card-header d-flex justify-content-end">

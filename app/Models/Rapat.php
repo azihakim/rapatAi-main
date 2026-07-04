@@ -12,4 +12,9 @@ class Rapat extends Model
     {
         return $this->hasMany(PesertaRapat::class);
     }
+
+    public function jadwalHari()
+    {
+        return $this->hasMany(JadwalRapatHari::class)->orderBy('tanggal');
+    }
 }

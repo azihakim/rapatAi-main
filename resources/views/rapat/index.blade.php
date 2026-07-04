@@ -130,6 +130,34 @@
 				padding: 0 !important;
 			}
 		}
+
+		.jadwal-hari-row {
+			background: #fff;
+			border: 1px solid #dee2e6;
+			border-radius: 6px;
+			padding: 10px 12px;
+			margin-bottom: 8px;
+		}
+
+		.jadwal-hari-row:last-child {
+			margin-bottom: 0;
+		}
+
+		.jadwal-hari-row .hari-label {
+			font-weight: 600;
+			color: #495057;
+			margin-bottom: 6px;
+			font-size: 0.9rem;
+		}
+
+		.jadwal-hari-row .badge-hari {
+			background: #4e73df;
+			color: #fff;
+			padding: 2px 8px;
+			border-radius: 4px;
+			font-size: 0.75rem;
+			margin-right: 6px;
+		}
 	</style>
 @endpush
 @section('content')
@@ -184,19 +212,15 @@
 										required>
 								</div>
 								<div class="mb-3">
-									<label for="tanggal_selesai" class="form-label">Tanggal Selesai <small class="text-muted">(Kosongkan jika rapat 1 hari)</small></label>
-									<input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai" placeholder="Pilih tanggal selesai rapat">
+								<label for="tanggal_selesai" class="form-label">Tanggal Selesai <small class="text-muted">(Kosongkan jika rapat 1 hari)</small></label>
+								<input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai" placeholder="Pilih tanggal selesai rapat">
+							</div>
+							<div class="mb-3">
+								<label class="form-label">Jadwal Per Hari <span class="text-danger">*</span></label>
+								<div id="jadwalPerHariContainer" class="border rounded p-3" style="background:#f8f9fa;">
+									<em class="text-muted">Pilih tanggal mulai untuk menentukan jadwal per hari.</em>
 								</div>
-								<div class="mb-3">
-									<label for="jam_mulai" class="form-label">Jam Mulai <span class="text-danger">*</span></label>
-									<input type="time" class="form-control" id="jam_mulai" name="jam_mulai" placeholder="Pilih jam mulai rapat"
-										required>
-								</div>
-								<div class="mb-3">
-									<label for="jam_selesai" class="form-label">Jam Selesai <span class="text-danger">*</span></label>
-									<input type="time" class="form-control" id="jam_selesai" name="jam_selesai"
-										placeholder="Pilih jam selesai rapat" required>
-								</div>
+							</div>
 								<div class="mb-3">
 									<label for="lokasi" class="form-label">Lokasi <span class="text-danger">*</span></label>
 									<input type="text" class="form-control" id="lokasi" name="lokasi" placeholder="Masukkan lokasi rapat"
@@ -506,7 +530,22 @@
 					$('#acara-rapat').text(data.acara || '-');
 					$('#agenda-rapat').text(data.agenda || '-');
 					$('#tanggal-rapat').text(data.tanggalRapat || '-');
-					$('#waktu-rapat').text(data.waktu || '-');
+
+					// Render waktu per hari
+					if (data.jadwalHari && data.jadwalHari.length > 0) {
+						if (data.jadwalHari.length === 1) {
+							$('#waktu-rapat').text(data.jadwalHari[0].jam_mulai + ' WIB s.d ' + data.jadwalHari[0].jam_selesai + ' WIB');
+						} else {
+							var waktuHtml = '';
+							data.jadwalHari.forEach(function(h, i) {
+								waktuHtml += '<div>' + h.tanggal + ': ' + h.jam_mulai + ' WIB s.d ' + h.jam_selesai + ' WIB</div>';
+							});
+							$('#waktu-rapat').html(waktuHtml);
+						}
+					} else {
+						$('#waktu-rapat').text(data.waktu || '-');
+					}
+
 					$('#tempat-rapat').text(data.tempat || '-');
 					$('#nama-ttd').text(data.penandatangan || '-');
 

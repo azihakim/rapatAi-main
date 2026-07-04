@@ -35,7 +35,7 @@
     <li class="nav-item {{ request()->is('ketersediaan-pribadi') ? 'active' : '' }}">
         <a class="nav-link" href="{{ url('ketersediaan-pribadi') }}">
             <i class="fas fa-fw fa-user-clock"></i>
-            <span>Ketersediaan Pribadi</span>
+            <span>Kegiatan Anggota</span>
         </a>
     </li>
     <li class="nav-item {{ request()->is('logistik') ? 'active' : '' }}">

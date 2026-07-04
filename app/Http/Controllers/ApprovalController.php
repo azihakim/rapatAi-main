@@ -21,7 +21,19 @@ class ApprovalController extends Controller
  public function viewSuratUndanganRapat($id)
  {
   try {
-   $rapat = Rapat::findOrFail($id);
+   $rapat = Rapat::with('jadwalHari')->findOrFail($id);
+
+   // Format jadwal per hari untuk surat
+   $jadwalHariFormatted = [];
+   if ($rapat->jadwalHari && $rapat->jadwalHari->count() > 0) {
+    foreach ($rapat->jadwalHari as $h) {
+     $jadwalHariFormatted[] = [
+      'tanggal' => $this->formatTanggalIndonesia($h->tanggal),
+      'jam_mulai' => date('H:i', strtotime($h->jam_mulai)),
+      'jam_selesai' => date('H:i', strtotime($h->jam_selesai)),
+     ];
+    }
+   }
 
    // Format data untuk surat
    $suratData = [
@@ -39,6 +51,7 @@ class ApprovalController extends Controller
     'jamMulai' => $rapat->jam_mulai ?? $rapat->waktu,
     'jamSelesai' => $rapat->jam_selesai,
     'waktu' => $this->formatWaktuRapat($rapat),
+    'jadwalHari' => $jadwalHariFormatted,
     'tempat' => $rapat->lokasi ?? 'Ruang Rapat DPRD Provinsi Sumatera Selatan',
     'penandatangan' => User::with('role')->whereHas('role', function ($query) {
      $query->where('name', 'pimpinan');
