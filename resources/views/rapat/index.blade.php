@@ -179,9 +179,13 @@
 									<input type="text" class="form-control" id="hal" name="hal" placeholder="Masukkan Hal" required>
 								</div>
 								<div class="mb-3">
-									<label for="tanggal" class="form-label">Tanggal <span class="text-danger">*</span></label>
-									<input type="date" class="form-control" id="tanggal" name="tanggal" placeholder="Pilih tanggal rapat"
+									<label for="tanggal" class="form-label">Tanggal Mulai <span class="text-danger">*</span></label>
+									<input type="date" class="form-control" id="tanggal" name="tanggal" placeholder="Pilih tanggal mulai rapat"
 										required>
+								</div>
+								<div class="mb-3">
+									<label for="tanggal_selesai" class="form-label">Tanggal Selesai <small class="text-muted">(Kosongkan jika rapat 1 hari)</small></label>
+									<input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai" placeholder="Pilih tanggal selesai rapat">
 								</div>
 								<div class="mb-3">
 									<label for="jam_mulai" class="form-label">Jam Mulai <span class="text-danger">*</span></label>

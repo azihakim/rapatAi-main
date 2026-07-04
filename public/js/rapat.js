@@ -19,6 +19,7 @@ function fetchJadwalPeserta() {
         pesertaIds.push($(this).val());
     });
     let tanggal = $("#tanggal").val();
+    let tanggalSelesai = $("#tanggal_selesai").val();
     if (pesertaIds.length === 0 || !tanggal) {
         $("#jadwalPesertaTerpilih").html(
             "<em>Pilih peserta dan tanggal rapat untuk melihat jadwal ketersediaan mereka.</em>",
@@ -35,6 +36,7 @@ function fetchJadwalPeserta() {
             _token: $('meta[name="csrf-token"]').attr("content"),
             peserta: pesertaIds,
             tanggal: tanggal,
+            tanggal_selesai: tanggalSelesai || null,
         },
         success: function (res) {
             let html = "";
@@ -66,7 +68,21 @@ function fetchJadwalPeserta() {
 }
 
 // Trigger fetch jadwal saat peserta atau tanggal berubah
-$(document).on("change", ".checkboxPeserta, #tanggal", fetchJadwalPeserta);
+$(document).on("change", ".checkboxPeserta, #tanggal, #tanggal_selesai", fetchJadwalPeserta);
+
+// Validasi tanggal selesai >= tanggal mulai
+$(document).on("change", "#tanggal, #tanggal_selesai", function () {
+    var tanggalMulai = $("#tanggal").val();
+    var tanggalSelesai = $("#tanggal_selesai").val();
+    if (tanggalMulai && tanggalSelesai && tanggalSelesai < tanggalMulai) {
+        $("#tanggal_selesai").val("");
+        toastr.warning("Tanggal selesai harus sama atau setelah tanggal mulai.");
+    }
+    // Set min date pada tanggal_selesai
+    if (tanggalMulai) {
+        $("#tanggal_selesai").attr("min", tanggalMulai);
+    }
+});
 
 $(document).ready(function () {
     initTableRapat();
@@ -104,6 +120,7 @@ $(document).on("click", ".editRapat", function () {
 $("#modalRapat").on("hidden.bs.modal", function () {
     $("#formTambahRapat")[0].reset();
     $("#id").val("");
+    $("#tanggal_selesai").val("");
     $(".modal-title").text("");
     save_method = "";
 
@@ -222,6 +239,7 @@ function showSelectedData(id) {
             const data = response.data || {};
             $("#id").val(data.id || "");
             $("#tanggal").val(data.tanggal || "");
+            $("#tanggal_selesai").val(data.tanggal_selesai || "");
             $("#jam_mulai").val(data.jam_mulai || data.waktu || "");
             $("#jam_selesai").val(data.jam_selesai || "");
             $("#lokasi").val(data.lokasi || "");
@@ -335,6 +353,7 @@ $("#btnGenerateRekomendasi").on("click", function () {
             peserta: pesertaIds,
             duration: durasi,
             tanggal: $("#tanggal").val(),
+            tanggal_selesai: $("#tanggal_selesai").val() || null,
         },
         success: function (res) {
             // Hapus isi textarea

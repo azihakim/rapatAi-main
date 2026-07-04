@@ -30,7 +30,12 @@ class RapatController extends Controller
                 ->addIndexColumn()
                 ->addColumn('tanggal_rapat', function ($row) {
                     Carbon::setLocale('id');
-                    return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
+                    $tanggalMulai = Carbon::parse($row->tanggal)->translatedFormat('d F Y');
+                    if ($row->tanggal_selesai && $row->tanggal_selesai !== $row->tanggal) {
+                        $tanggalSelesai = Carbon::parse($row->tanggal_selesai)->translatedFormat('d F Y');
+                        return $tanggalMulai . ' s.d ' . $tanggalSelesai;
+                    }
+                    return $tanggalMulai;
                 })
                 ->addColumn('waktu_rapat', function ($row) {
                     $jamMulai = $row->jam_mulai ?? $row->waktu;
@@ -87,6 +92,7 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
             'jam_mulai' => 'required|date_format:H:i',
             'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'required|string|max:255',
@@ -105,6 +111,7 @@ class RapatController extends Controller
 
         $rapat = Rapat::create([
             'tanggal' => $request->tanggal,
+            'tanggal_selesai' => $request->tanggal_selesai,
             'waktu' => $request->jam_mulai,
             'jam_mulai' => $request->jam_mulai,
             'jam_selesai' => $request->jam_selesai,
@@ -172,6 +179,7 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
             'jam_mulai' => 'required|date_format:H:i',
             'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'required|string|max:255',
@@ -189,6 +197,7 @@ class RapatController extends Controller
             $rapat = Rapat::findOrFail($id);
             $rapat->update([
                 'tanggal' => $request->tanggal,
+                'tanggal_selesai' => $request->tanggal_selesai,
                 'waktu' => $request->jam_mulai,
                 'jam_mulai' => $request->jam_mulai,
                 'jam_selesai' => $request->jam_selesai,
@@ -246,11 +255,15 @@ class RapatController extends Controller
             'peserta' => 'required|array',
             'duration' => 'required|string',
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
         ]);
 
+        $tanggalMulai = $request->tanggal;
+        $tanggalSelesai = $request->tanggal_selesai ?? $request->tanggal;
+
         $availabilities = User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
-                $q->where('tanggal', $request->tanggal);
+            ->with(['ketersediaanPribadi' => function ($q) use ($tanggalMulai, $tanggalSelesai) {
+                $q->whereBetween('tanggal', [$tanggalMulai, $tanggalSelesai]);
             }])
             ->get()
             ->map(function ($user) {
@@ -279,11 +292,15 @@ class RapatController extends Controller
         $request->validate([
             'peserta' => 'required|array|min:1',
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
         ]);
 
+        $tanggalMulai = $request->tanggal;
+        $tanggalSelesai = $request->tanggal_selesai ?? $request->tanggal;
+
         $users = \App\Models\User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
-                $q->where('tanggal', $request->tanggal);
+            ->with(['ketersediaanPribadi' => function ($q) use ($tanggalMulai, $tanggalSelesai) {
+                $q->whereBetween('tanggal', [$tanggalMulai, $tanggalSelesai]);
             }])->get();
 
         $result = $users->map(function ($user) {
