@@ -3,7 +3,10 @@
 @section('content')
 <div class="container">
     <h1>Tambah Tindak Lanjut Rapat</h1>
-    <form action="{{ route('tindak-lanjut-rapat.store') }}" method="POST">
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+    <form action="{{ route('tindak-lanjut-rapat.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="mb-3">
             <label>Rapat</label>
@@ -42,6 +45,11 @@
         <div class="mb-3">
             <label>Progress (%)</label>
             <input type="number" name="progress" class="form-control" min="0" max="100" value="{{ old('progress', 0) }}" required>
+        </div>
+        <div class="mb-3">
+            <label>Bukti Progress (PDF, Maks. 10MB)</label>
+            <input type="file" name="bukti_progres" class="form-control" accept=".pdf">
+            <small class="form-text text-muted">Upload bukti progres dari anggota dewan berupa file PDF.</small>
         </div>
         <button type="submit" class="btn btn-primary">Simpan</button>
         <a href="{{ route('tindak-lanjut-rapat.index') }}" class="btn btn-secondary">Batal</a>

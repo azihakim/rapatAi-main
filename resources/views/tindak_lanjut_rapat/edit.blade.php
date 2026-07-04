@@ -3,7 +3,10 @@
 @section('content')
 <div class="container">
     <h1>Edit Tindak Lanjut Rapat</h1>
-    <form action="{{ route('tindak-lanjut-rapat.update', $tindak_lanjut_rapat) }}" method="POST">
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+    <form action="{{ route('tindak-lanjut-rapat.update', $tindak_lanjut_rapat) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="mb-3">
@@ -43,6 +46,17 @@
         <div class="mb-3">
             <label>Progress (%)</label>
             <input type="number" name="progress" class="form-control" min="0" max="100" value="{{ old('progress', $tindak_lanjut_rapat->progress) }}" required>
+        </div>
+        <div class="mb-3">
+            <label>Bukti Progress (PDF, Maks. 10MB)</label>
+            @if($tindak_lanjut_rapat->bukti_progres)
+                <div class="mb-2">
+                    <span class="text-success"><i class="fas fa-file-pdf"></i> File saat ini:</span>
+                    <a href="{{ route('tindak-lanjut-rapat.download-bukti', $tindak_lanjut_rapat) }}" target="_blank" class="btn btn-sm btn-info ml-1"><i class="fas fa-download"></i> Download PDF</a>
+                </div>
+            @endif
+            <input type="file" name="bukti_progres" class="form-control" accept=".pdf">
+            <small class="form-text text-muted">Upload file baru untuk menggantikan bukti progres sebelumnya (format PDF).</small>
         </div>
         <button type="submit" class="btn btn-primary">Update</button>
         <a href="{{ route('tindak-lanjut-rapat.index') }}" class="btn btn-secondary">Batal</a>

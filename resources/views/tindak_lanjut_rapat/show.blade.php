@@ -3,6 +3,9 @@
 @section('content')
 <div class="container">
     <h1>Detail Tindak Lanjut Rapat</h1>
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">{{ $tindak_lanjut_rapat->rapat->judul ?? '-' }}</h5>
@@ -11,6 +14,14 @@
             <p class="card-text"><strong>Batas Waktu:</strong> {{ $tindak_lanjut_rapat->batas_waktu }}</p>
             <p class="card-text"><strong>Status:</strong> {{ ucfirst($tindak_lanjut_rapat->status) }}</p>
             <p class="card-text"><strong>Progress:</strong> {{ $tindak_lanjut_rapat->progress }}%</p>
+            <p class="card-text">
+                <strong>Bukti Progress:</strong>
+                @if($tindak_lanjut_rapat->bukti_progres)
+                    <a href="{{ route('tindak-lanjut-rapat.download-bukti', $tindak_lanjut_rapat) }}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-file-pdf"></i> Lihat / Download PDF</a>
+                @else
+                    <span class="text-muted">Belum ada bukti yang diupload</span>
+                @endif
+            </p>
             <a href="{{ route('tindak-lanjut-rapat.edit', $tindak_lanjut_rapat) }}" class="btn btn-warning">Edit</a>
             <a href="{{ route('tindak-lanjut-rapat.index') }}" class="btn btn-secondary">Kembali</a>
         </div>
