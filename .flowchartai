@@ -1,0 +1,133 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundcorner 8
+skinparam shadowing false
+
+skinparam activity {
+    BackgroundColor #F8FAFC
+    BorderColor #3B82F6
+    FontColor #0F172A
+    FontSize 13
+    DiamondBackgroundColor #FEF3C7
+    DiamondBorderColor #D97706
+    DiamondFontColor #0F172A
+}
+
+skinparam note {
+    BackgroundColor #F0FDF4
+    BorderColor #16A34A
+    FontColor #14532D
+    FontSize 11
+}
+
+skinparam partition {
+    BorderColor #64748B
+    FontColor #1E293B
+    FontSize 14
+    FontStyle bold
+}
+
+skinparam arrow {
+    Color #475569
+    FontColor #475569
+    FontSize 11
+}
+
+title **FLOWCHART LOGIKA PENCARIAN IRISAN JADWAL RAPAT**\nImplementasi AI pada file: //app/Services/AIService.php// (Method: generateMeetingRecommendation)\n
+
+start
+
+partition "1. Inisialisasi & Pengkondisian Rentang Waktu (PHP Service Level)" {
+    :Menerima Parameter Input Rapat:
+    - **$availabilities**: Array data ketersediaan pribadi peserta
+    - **$duration**: Durasi rapat (Default: "1 hour")
+    - **$tanggalMulai**: Tanggal awal pencarian jadwal
+    - **$tanggalSelesai**: Tanggal akhir pencarian jadwal;
+
+    :Inisialisasi Base Prompt AI:
+    Menetapkan peran AI sebagai asisten rapat untuk mencari
+    waktu bersama terbaik dengan durasi **{$duration}**;
+
+    if (Apakah Rapat Multi-Hari?\n**$tanggalMulai** != **$tanggalSelesai**) then (Ya: Multi-Hari)
+        :Tambahkan Instruksi Rapat Multi-Hari:
+        - Rentang waktu: **$tanggalMulai** s/d **$tanggalSelesai**
+        - Jam mulai & selesai **bisa berbeda tiap harinya** (multi-jam)
+        - Berikan beberapa opsi rangkaian jadwal (Opsi 1, Opsi 2, dst.)
+        - Rincikan tanggal & jam untuk **setiap hari** secara spesifik;
+    else (Tidak: Satu Hari / Single-Day)
+        :Tambahkan Instruksi Rapat Satu Hari:
+        - Rapat diadakan khusus pada tanggal **$tanggalMulai**
+        - Berikan beberapa pilihan opsi jam rapat di tanggal tersebut;
+    endif
+}
+
+partition "2. Logika Pencarian Irisan & Aturan AI (AI Prompt Instructions)" {
+    :Suntikkan Logika Pencarian Irisan Waktu\n& Penanganan Ketidaktersediaan;
+    note right
+        **ATURAN LOGIKA IRISAN JADWAL DI DALAM PROMPT:**
+        1. **Irisan Sempurna (100% Kehadiran):**
+           Cari opsi jadwal yang paling memungkinkan dihadiri
+           oleh **seluruh peserta** tanpa bentrok.
+        2. **Fallback Logic (Irisan Sebagian / Alternatif):**
+           Jika tidak ada waktu 100% cocok di hari tertentu, AI harus:
+           - Memberikan jawaban jujur dan logis.
+           - Menyarankan opsi dengan **tingkat kehadiran tertinggi**.
+           - Menyarankan alternatif waktu lain.
+        3. **Validasi Jam Istirahat (Lunch Break Check):**
+           - Sertakan pertanyaan di akhir kepada pengguna: apakah
+             rapat bisa dilaksanakan pada jam istirahat (12:00-13:00)?
+           - Jika tidak bisa, sarankan menghindari opsi di jam tersebut.
+    end note
+
+    :Suntikkan Aturan Formatting Output (Prompt Guarding);
+    note left
+        **ATURAN FORMATTING WAJIB (UI/UX Friendly):**
+        1. **Tanpa Tabel/Simbol:** JANGAN gunakan tabel Markdown (|---|)
+           atau garis pembatas (---) berlebihan.
+        2. **Mudah Dibaca:** Gunakan kalimat biasa, daftar angka (1, 2, 3),
+           atau bullet (*) sederhana agar nyaman di layar HP/Web.
+        3. **Tanpa Heading Berderet:** Hindari (###), gunakan
+           **Teks Tebal (Bold)** untuk menegaskan tanggal, jam, & opsi.
+        4. **Gaya Asisten:** Respons ringkas, terstruktur rapi, langsung
+           pada inti rekomendasi, ramah, dan alami.
+    end note
+
+    :Konversi Data Ketersediaan Peserta ke JSON:
+    **json_encode($availabilities, JSON_PRETTY_PRINT)**
+    Dilampirkan di bawah label **"DATA KETERSEDIAAN:"**;
+}
+
+partition "3. Eksekusi Request & Pengolahan Respons API (Google Gemini)" {
+    :Kirim HTTP POST Request ke Google Gemini API;
+    note right
+        - **Client:** GuzzleHttp Client (Timeout: 120s)
+        - **Endpoint:** v1beta/models/gemini-2.0-flash:generateContent
+        - **Auth:** AI_API_KEY (Environment Variable)
+        - **Payload:** JSON contents -> parts -> text (Prompt + Data)
+    end note
+
+    :Terima Respons HTTP & Decode JSON Body\n(**json_decode($response->getBody(), true)**);
+
+    if (Apakah Respons Sukses & Memiliki Kandungan Teks?\nisset(**$result['candidates'][0]['content']['parts'][0]['text']**)) then (Ya: Berhasil)
+        :Ekstraksi Teks Rekomendasi Irisan Jadwal dari AI;
+    else (Tidak: Gagal / Kosong / Error)
+        :Gunakan Teks Fallback Default:
+        **"Tidak ada rekomendasi ditemukan."**;
+    endif
+}
+
+:Kembalikan Hasil Rekomendasi Akhir ke Controller/User;
+
+stop
+
+legend right
+  **KETERANGAN FLOWCHART:**
+  - **Kotak Proses**: Langkah eksekusi pada kode PHP (AIService)
+  - **Belah Ketupat**: Percabangan kondisi logika pemrograman
+  - **Catatan (Note)**: Aturan & logika cerdas yang ditanamkan ke dalam AI Prompt
+endlegend
+
+@enduml
