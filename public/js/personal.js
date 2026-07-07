@@ -1,7 +1,12 @@
-var personalTable;
+/**
+ * personal.js – Kegiatan Anggota (Google Calendar view)
+ * Uses FullCalendar to render events and modals for CRUD.
+ */
+
+var calendarInstance;
 var save_method;
 let myData = {};
-const urls = "ketersediaan-pribadi";
+const urls = "/ketersediaan-pribadi";
 let personalDateIndex = 0;
 let personalSlotIndex = 0;
 
@@ -10,15 +15,163 @@ const defaultEndTime = "17:00";
 const fullDayStartTime = "00:00";
 const fullDayEndTime = "23:59";
 
+// Current detail event (for edit / delete from detail modal)
+let currentDetailEventId = null;
+
 jQuery(function () {
     myData._token = $('meta[name="csrf-token"]').attr("content");
 });
 
 $(document).ready(function () {
-    initTablePersonal();
+    initCalendar();
     resetPersonalForm("add");
 });
 
+/* ===================================================================
+   FullCalendar Initialization
+   =================================================================== */
+function initCalendar() {
+    var calendarEl = document.getElementById("calendarKegiatan");
+    if (!calendarEl) return;
+
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: "dayGridMonth",
+        locale: "id",
+        firstDay: 1, // Monday
+        height: "auto",
+        dayMaxEvents: 3,
+        weekends: true,
+        selectable: false,
+        headerToolbar: false, // We use our custom toolbar
+
+        // Load events via jQuery AJAX (sends X-Requested-With header for Laravel)
+        events: function (info, successCallback, failureCallback) {
+            $.ajax({
+                url: urls,
+                type: "GET",
+                dataType: "json",
+                success: function (data) {
+                    successCallback(data);
+                },
+                error: function () {
+                    toastr.error("Gagal memuat data kegiatan.");
+                    failureCallback();
+                },
+            });
+        },
+
+        // Click on a date → open Add modal with date prefilled
+        dateClick: function (info) {
+            save_method = "add";
+            resetPersonalForm("add");
+            // Pre-fill the date in the first date card
+            var firstDateInput = $(
+                "#personalRows .personal-date-card:first .personal-date-input"
+            );
+            if (firstDateInput.length) {
+                firstDateInput.val(info.dateStr);
+            }
+            $(".modal-title").text("Tambah Kegiatan Baru");
+            $("#modalPersonal").modal("show");
+        },
+
+        // Click on an event → open Detail modal
+        eventClick: function (info) {
+            info.jsEvent.preventDefault();
+            openDetailModal(info.event);
+        },
+
+        // Custom event rendering with tooltip
+        eventDidMount: function (info) {
+            var props = info.event.extendedProps || {};
+            var tipText = (props.nama || "") + "\n";
+            tipText += (props.tanggal || "") + "\n";
+            tipText += (props.waktu_mulai || "") + " - " + (props.waktu_selesai || "");
+            info.el.setAttribute("title", tipText);
+        },
+
+        // Update month display when dates change
+        datesSet: function (info) {
+            updateMonthDisplay(info.view);
+        },
+    });
+
+    calendarInstance.render();
+    setupToolbarHandlers();
+}
+
+/* ===================================================================
+   Custom Toolbar Handlers
+   =================================================================== */
+function setupToolbarHandlers() {
+    // Previous
+    $(document).on("click", "#calPrev", function () {
+        calendarInstance.prev();
+    });
+
+    // Next
+    $(document).on("click", "#calNext", function () {
+        calendarInstance.next();
+    });
+
+    // Today
+    $(document).on("click", "#calToday", function () {
+        calendarInstance.today();
+    });
+
+    // View toggle buttons
+    $(document).on("click", ".vtoggle-btn", function () {
+        var view = $(this).data("view");
+        calendarInstance.changeView(view);
+        $(".vtoggle-btn").removeClass("active");
+        $(this).addClass("active");
+    });
+}
+
+function updateMonthDisplay(view) {
+    var title = view.title; // FullCalendar auto-formats with locale
+    $("#calMonthDisplay").text(title);
+}
+
+/* ===================================================================
+   Detail Modal (view event info)
+   =================================================================== */
+function openDetailModal(event) {
+    var props = event.extendedProps || {};
+
+    currentDetailEventId = props.ketersediaan_id || event.id;
+
+    $("#detailDot").css("background", event.backgroundColor || "#4e73df");
+    $("#detailEventTitle").text(props.nama || "Kegiatan");
+    $("#detailNama").text(props.nama || "-");
+    $("#detailTanggal").text(props.tanggal || "-");
+
+    var waktu =
+        props.is_full_day
+            ? "Seharian (00:00 - 23:59)"
+            : (props.waktu_mulai || "-") + " - " + (props.waktu_selesai || "-");
+    $("#detailWaktu").text(waktu);
+
+    $("#modalEventDetail").modal("show");
+}
+
+// Edit from detail modal
+$(document).on("click", "#btnEditEvent", function () {
+    if (!currentDetailEventId) return;
+    $("#modalEventDetail").modal("hide");
+    showSelectedData(currentDetailEventId);
+});
+
+// Delete from detail modal
+$(document).on("click", "#btnDeleteEvent", function () {
+    if (!currentDetailEventId) return;
+    $("#modalEventDetail").modal("hide");
+    deleteKegiatan(currentDetailEventId);
+});
+
+/* ===================================================================
+   Add Button (top toolbar)
+   =================================================================== */
 $(document).on("click", ".addPersonal", function () {
     save_method = "add";
     resetPersonalForm("add");
@@ -26,11 +179,9 @@ $(document).on("click", ".addPersonal", function () {
     $(".modal-title").text("Tambah Data Jadwal Pribadi");
 });
 
-$(document).on("click", ".editKetersediaanPribadi", function () {
-    var id = $(this).data("id");
-    showSelectedData(id);
-});
-
+/* ===================================================================
+   Form Row Handlers (tanggal / waktu)
+   =================================================================== */
 $(document).on("click", ".addTanggalRow", function () {
     $("#personalRows").append(createTanggalCard());
 });
@@ -46,7 +197,6 @@ $(document).on("click", ".removeTanggalRow", function () {
         toastr.warning("Minimal satu tanggal harus diisi.");
         return;
     }
-
     $(this).closest(".personal-date-card").remove();
 });
 
@@ -56,7 +206,6 @@ $(document).on("click", ".removeWaktuRow", function () {
         toastr.warning("Minimal satu rentang jam harus diisi.");
         return;
     }
-
     $(this).closest(".personal-slot-row").remove();
 });
 
@@ -64,6 +213,9 @@ $(document).on("change", ".personal-full-day", function () {
     syncFullDayState($(this).closest(".personal-slot-row"), this.checked);
 });
 
+/* ===================================================================
+   Modal Reset on Close
+   =================================================================== */
 $("#modalPersonal").on("hidden.bs.modal", function () {
     resetPersonalForm("add");
     $("#id").val("");
@@ -78,38 +230,9 @@ $("#modalPersonal").on("hidden.bs.modal", function () {
     form.find(".form-control").removeClass("is-valid");
 });
 
-async function initTablePersonal() {
-    personalTable = $("#tablePersonal").DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: urls,
-            type: "GET",
-        },
-        columns: [
-            {
-                data: "DT_RowIndex",
-                name: "DT_RowIndex",
-                orderable: false,
-                searchable: false,
-            },
-            { data: "nama", name: "nama" },
-            { data: "tanggal", name: "tanggal" },
-            { data: "waktu_mulai", name: "waktu_mulai" },
-            { data: "waktu_selesai", name: "waktu_selesai" },
-            {
-                data: "action",
-                name: "action",
-                orderable: false,
-                searchable: false,
-            },
-        ],
-        order: [[1, "asc"]],
-        responsive: true,
-        autoWidth: false,
-    });
-}
-
+/* ===================================================================
+   Form Helpers
+   =================================================================== */
 function resetPersonalForm(mode) {
     $("#formPersonal")[0].reset();
     $("#personalRows").empty();
@@ -133,7 +256,8 @@ function setEditMode(isEdit) {
     $(".personal-full-day").prop("disabled", isEdit);
 }
 
-function createTanggalCard(data = {}) {
+function createTanggalCard(data) {
+    data = data || {};
     var dateIndex =
         typeof data.dateIndex === "number"
             ? data.dateIndex
@@ -167,7 +291,7 @@ function createTanggalCard(data = {}) {
             '<button type="button" class="btn btn-outline-primary btn-sm addWaktuRow">Tambah Jam</button>' +
             "</div>" +
             "</div>" +
-            "</div>",
+            "</div>"
     );
 
     var slotsContainer = card.find(".personal-slots");
@@ -178,7 +302,8 @@ function createTanggalCard(data = {}) {
     return card;
 }
 
-function createSlotRow(dateIndex, slot = {}) {
+function createSlotRow(dateIndex, slot) {
+    slot = slot || {};
     var slotIndex =
         typeof slot.slotIndex === "number"
             ? slot.slotIndex
@@ -241,7 +366,7 @@ function createSlotRow(dateIndex, slot = {}) {
             '<div class="text-right mt-2">' +
             '<button type="button" class="btn btn-link text-danger p-0 removeWaktuRow">Hapus Jam</button>' +
             "</div>" +
-            "</div>",
+            "</div>"
     );
 
     if (isFullDay) {
@@ -272,10 +397,7 @@ function syncFullDayState(row, checked) {
 }
 
 function normalizeTime(value) {
-    if (!value) {
-        return "";
-    }
-
+    if (!value) return "";
     return String(value).substring(0, 5);
 }
 
@@ -288,6 +410,9 @@ function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 
+/* ===================================================================
+   CRUD Operations
+   =================================================================== */
 function save() {
     var url = urls;
     var method = "POST";
@@ -310,7 +435,8 @@ function save() {
         success: function (response) {
             $("#modalPersonal").modal("hide");
             if (response.status) {
-                personalTable.ajax.reload();
+                // Refresh calendar events
+                calendarInstance.refetchEvents();
                 toastr.success(response.message);
             }
         },
@@ -369,7 +495,7 @@ function showSelectedData(id) {
                                     fullDayEndTime,
                         },
                     ],
-                }),
+                })
             );
 
             setEditMode(true);
@@ -385,12 +511,10 @@ function showSelectedData(id) {
     });
 }
 
-$(document).on("click", ".deleteKetersediaanPribadi", function () {
-    var id = $(this).data("id");
-
+function deleteKegiatan(id) {
     Swal.fire({
         title: "Konfirmasi Hapus",
-        text: "Apakah Anda yakin ingin menghapus data ini?",
+        text: "Apakah Anda yakin ingin menghapus kegiatan ini?",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -408,7 +532,7 @@ $(document).on("click", ".deleteKetersediaanPribadi", function () {
                 },
                 success: function (res) {
                     if (res.status) {
-                        personalTable.ajax.reload();
+                        calendarInstance.refetchEvents();
                         toastr.success(res.message);
                     }
                 },
@@ -424,4 +548,4 @@ $(document).on("click", ".deleteKetersediaanPribadi", function () {
             });
         }
     });
-});
+}
