@@ -1,0 +1,111 @@
+# Laporan & Penjelasan Detail Keamanan Sistem (Security Architecture Description)
+**Proyek:** RapatAI (Sistem Manajemen Rapat & Notulensi Berbasis AI)  
+**Framework:** Laravel 12 (PHP 8.2+)  
+
+---
+
+## 1. Keamanan Tingkat Framework & Arsitektur (Laravel 12 MVC)
+Proyek ini dibangun di atas arsitektur **Model-View-Controller (MVC)** menggunakan framework **Laravel 12**, yang secara default menyediakan berbagai lapisan pertahanan terhadap celah keamanan web umum (OWASP Top 10):
+
+* **Pencegahan SQL Injection (SQLi):**  
+  Aplikasi menggunakan **Eloquent ORM** dan **Laravel Query Builder** (contoh pada `User::whereHas(...)`, `Rapat::create(...)`). Seluruh interaksi database di bawah kap menggunakan *PDO Parameter Binding* (prepared statements). Input pengguna tidak pernah digabungkan langsung ke dalam string query SQL mentah, sehingga mengeksekusi perintah SQL berbahaya lewat form input atau parameter URL mustahil dilakukan.
+* **Pencegahan Cross-Site Scripting (XSS):**  
+  Seluruh tampilan antarmuka dibangun menggunakan mesin templating **Blade**. Ketika menampilkan variabel atau data dari database (misalnya `{{ $rapat->judul }}` atau `{{ $user->name }}`), Blade secara otomatis menjalankan fungsi `htmlspecialchars()` PHP untuk meloloskan (escape) entitas HTML. Skrip berbahaya seperti `<script>alert('XSS')</script>` akan ditampilkan sebagai teks biasa, bukan dieksekusi oleh browser.
+* **Pencegahan Cross-Site Request Forgery (CSRF):**  
+  Seluruh permintaan HTTP dengan metode modifikasi data (`POST`, `PUT`, `PATCH`, `DELETE`) dilindungi oleh proteksi CSRF bawaan Laravel. Setiap form HTML diwajibkan menyertakan direktif `@csrf` yang menghasilkan token rahasia unik per sesi. Middleware web Laravel akan memverifikasi kesesuaian token ini sebelum memproses request, mencegah serangan di mana situs pihak ketiga memaksa browser pengguna mengirimkan request tanpa sepengetahuan mereka.
+* **Pencegahan Mass Assignment Vulnerability:**  
+  Model Eloquent (seperti `User.php`, `Rapat.php`, `Notulensi.php`, dan `TindakLanjutRapat.php`) secara eksplisit mendefinisikan properti `$fillable`. Properti ini menentukan atribut apa saja yang diizinkan untuk diisi secara massal (mass assignment). Kolom-kolom sensitif yang tidak terdaftar di `$fillable` tidak dapat dimodifikasi secara paksa oleh pengguna melalui pemalsuan parameter HTTP request.
+
+---
+
+## 2. Otentikasi & Manajemen Sesi (Authentication & Session Security)
+Sistem otentikasi proyek ini diimplementasikan menggunakan starter kit **Laravel Breeze** (`routes/auth.php`) yang menerapkan standar keamanan autentikasi modern:
+
+* **Hashing Password yang Kuat (Argon2Id / Bcrypt):**  
+  Password pengguna tidak pernah disimpan dalam bentuk *plaintext*. Pada model `App\Models\User`, atribut `password` dicast sebagai `'hashed'`, dan saat pembuatan atau pembaruan password di `UserController`, sistem menggunakan `Hash::make()`. Algoritma hashing ini menambahkan *salt* secara otomatis dan dirancang intensif secara komputasi untuk mencegah serangan *brute-force* dan *rainbow table*.
+* **Proteksi Atribut Sensitif (Hidden Attributes):**  
+  Pada `User.php`, atribut `$hidden = ['password', 'remember_token']` memastikan bahwa informasi kredensial tidak akan pernah ikut ter-serialisasi atau bocor ketika objek model diubah menjadi format JSON/Array (misal pada response API atau logging).
+* **Pencegahan Brute-Force & Rate Limiting (Throttling):**  
+  Rute sensitif pada `auth.php` (seperti verifikasi email dan pengiriman ulang link verifikasi) dilindungi oleh middleware *throttle* (`middleware('throttle:6,1')`). Hal ini membatasi jumlah maksimal percobaan request (maksimal 6 request per menit), memitigasi serangan *spamming* maupun pengujian password secara massal.
+* **Manajemen Sesi yang Aman:**  
+  Sesi pengguna dikelola menggunakan cookie HTTP yang diamankan dengan atribut `HttpOnly` (mencegah akses token sesi via JavaScript/XSS) serta `SameSite` (mengurangi risiko pembajakan sesi lintas situs). Fitur *logout* juga mengikutsertakan penghapusan dan regenerasi ID sesi untuk mencegah serangan *Session Fixation*.
+
+---
+
+## 3. Otorisasi & Kontrol Akses Berbasis Peran (Role-Based Access Control / RBAC)
+Aplikasi membagi otorisasi pengguna ke dalam beberapa peran spesifik (contoh: **Pimpinan**, **Sekretariat**, dan **Anggota**) menggunakan pendekatan berlapis:
+
+* **Proteksi Tingkat Rute (`auth` Middleware Group):**  
+  Di dalam `routes/web.php`, seluruh rute fungsionalitas sistem (seperti `/dashboard`, `/rapat`, `/notulensi`, `/approval`, `/logistik`) dikelompokkan ke dalam rute ber-middleware `auth`. Pengguna yang belum autentikasi (guest) akan langsung ditolak dan diarahkan kembali ke halaman login.
+* **Custom Role Middleware (`RoleMiddleware`):**  
+  Terdapat middleware kustom `App\Http\Middleware\RoleMiddleware` yang didaftarkan pada alias `'role'`. Middleware ini memeriksa hak akses secara dinamis dengan mengevaluasi kondisi:
+  ```php
+  if (!Auth::check() || Auth::user()->role->name !== $role) {
+      abort(403, 'Unauthorized.');
+  }
+  ```
+  Jika pengguna mencoba mengakses rute yang tidak sesuai dengan perannya, sistem langsung memutus request dengan status HTTP `403 Forbidden`.
+* **Validasi Otorisasi di Tingkat Controller (Business Logic Security):**  
+  Selain middleware rute, logika di dalam controller juga melakukan pemeriksaan peran dan status verifikasi secara ketat:
+  * Pada `ApprovalController`, penarikan data peserta, penandatangan, dan sekretariat difilter secara spesifik di level query (`whereHas('role', ...)`), sehingga pengguna dari peran yang tidak berwenang tidak akan muncul dalam daftar persetujuan atau aksi krusial.
+  * Pada `RapatController` dan `NotulensiController`, hak akses untuk melihat, mengubah, atau menyetujui dokumen diverifikasi berdasarkan peran pengguna yang sedang login (`Auth::user()->role->name`), menjaga agar batasan wewenang antar divisi/jabatan tetap konsisten.
+
+---
+
+## 4. Validasi & Sanitasi Input Pengguna (Input Validation & Sanitization)
+Setiap data yang dikirimkan ke server (baik melalui form HTML maupun AJAX request) wajib melewati proses validasi sebelum diproses oleh database atau logika bisnis:
+
+* **Validasi Ketat di Controller:**  
+  Sebagai contoh, pada `UserController::store`, `TindakLanjutRapatController::store`, dan `NotulensiController`, input divalidasi menggunakan `$request->validate([...])` dengan aturan (rules) yang spesifik:
+  * **Tipe Data & Ukuran:** Menggunakan `string`, `integer`, `max:255` untuk mencegah terjadinya *buffer overflow* atau kerusakan struktur tabel database.
+  * **Integritas Referensial (`exists`):** Parameter seperti `role_id` divalidasi dengan aturan `exists:roles,id`, memastikan bahwa ID peran yang dikirimkan oleh pengguna benar-benar valid dan ada di dalam tabel `roles`.
+  * **Pencegahan Duplikasi & Eskalasi Akun (`unique` & `confirmed`):** Pada pendaftaran atau pembaruan email dan password, sistem memastikan email belum digunakan (`unique:users,email`) dan password telah dikonfirmasi ulang (`confirmed`) untuk mencegah kesalahan input kredensial.
+
+---
+
+## 5. Keamanan Unggah & Manajemen File (File Upload & Storage Security)
+Aplikasi ini memiliki fitur pengunggahan file (audio transkripsi notulensi dan dokumen bukti tindak lanjut rapat). Keamanan pada aspek ini ditangani melalui beberapa mekanisme:
+
+* **Pembatasan Ekstensi & Tipe MIME (MIME-Type Validation):**  
+  File yang diunggah diverifikasi berdasarkan konten sebenarnya (bukan hanya ekstensi file di nama):
+  * Audio Notulensi: Divalidasi dengan `file|mimes:mp3,wav,aac|max:20480` (membatasi ukuran maksimal 20 MB dan hanya mengizinkan format audio sah).
+  * Bukti Tindak Lanjut: Divalidasi dengan `file|mimes:pdf|max:10240` (hanya menerima dokumen PDF dengan ukuran maksimal 10 MB).  
+  Hal ini mencegah pengunggahan file eksekusi berbahaya (seperti `.php`, `.exe`, `.js`, atau `.sh`) yang berpotensi disalahgunakan sebagai *Web Shell*.
+* **Isolasi Penyimpanan File (Storage Disk Isolation):**  
+  File tidak disimpan langsung di direktori root publik yang tidak terstruktur. Sistem menggunakan `Storage::disk('public')->store(...)` yang secara otomatis menghasilkan **nama file acak berbasis hash unik** (random unique filename hash). Mekanisme ini mencegah eksploitasi peretasan melalui penebakan nama file (directory traversal) serta mencegah file lama tertimpa (overwrite) oleh file baru yang bernamakan sama.
+* **Manajemen & Pembersihan File Bekas (Secure Deletion):**  
+  Saat data notulensi atau file lampiran diperbarui/dihapus, sistem secara aktif memanggil `Storage::disk('public')->delete(...)` untuk menghapus file fisik dari server. Ini mencegah kebocoran penyimpanan (resource exhaustion) dan menghindari adanya file yatim (orphaned files) yang tidak terurus di server.
+
+---
+
+## 6. Keamanan Integrasi AI & Komunikasi Eksternal (AI Service & API Security)
+Pada `App\Services\AIService`, aplikasi berintegrasi dengan layanan Google Gemini API untuk fitur *Speech-to-Text* dan *Rekomendasi Jadwal Rapat*. Keamanan dalam komunikasi ini diatur melalui:
+
+* **Proteksi Kredensial API via Environment Variables:**  
+  API Key (`AI_API_KEY`) tidak pernah di-hardcode ke dalam kode sumber PHP. Kredensial diambil secara dinamis dari file konfigurasi lingkungan (`env('AI_API_KEY')`). Ini melindungi kunci rahasia agar tidak ikut terunggah atau bocor ke version control sistem seperti Git/GitHub.
+* **Kendali Timeout pada HTTP Request:**  
+  Guzzle HTTP Client dikonfigurasi dengan batas waktu (`timeout => 120`). Jika server API eksternal mengalami gangguan atau merespons terlalu lama, koneksi akan diputus secara otomatis, mencegah aplikasi mengalami *hanging process* yang dapat menyebabkan kehabisan sumber daya server (Denial of Service).
+* **Sanitasi Prompt & Handling Payload yang Aman:**  
+  Data audio dikonversi secara aman dalam memori menjadi string Base64 (`base64_encode(file_get_contents(...))`) sebelum disisipkan ke dalam payload JSON. Selain itu, struktur prompt AI dibentuk di sisi server (server-side prompt construction), bukan menerima perintah mentah dari antarmuka pengguna, guna meminimalisir risiko serangan *Prompt Injection*.
+
+---
+
+## 7. Keamanan Lingkungan & Konfigurasi (Environment & Infrastructure Security)
+* **Isolasi Rahasia Proyek (`.env` & `.gitignore`):**  
+  File `.env` yang memuat kredensial database MySQL/SQLite, rahasia sesi (`APP_KEY`), serta kunci API AI dikecualikan dari kontrol versi melalui `.gitignore`. `APP_KEY` sendiri digunakan oleh algoritma enkripsi AES-256-CBC Laravel untuk mengamankan cookie, token, dan data terenkripsi lainnya.
+* **Proteksi Jejak Error (Debug Mode Control):**  
+  Dalam lingkungan produksi, konfigurasi `APP_DEBUG=false` mencegah framework menampilkan *stack trace* atau pesan error mendetail kepada pengguna umum. Hal ini memastikan struktur direktori server, informasi query database, dan variabel lingkungan internal tidak bocor ke publik apabila terjadi *exception*.
+
+---
+
+## 8. Ringkasan Praktik Terbaik yang Telah Diterapkan
+| Aspek Keamanan | Implementasi di Proyek RapatAI | Status |
+| :--- | :--- | :---: |
+| **SQL Injection (SQLi)** | PDO Parameter Binding via Eloquent ORM & Query Builder | ✅ Aman |
+| **Cross-Site Scripting (XSS)** | Auto-escaping HTML pada Blade Templating Engine (`{{ ... }}`) | ✅ Aman |
+| **Cross-Site Request Forgery (CSRF)** | Token CSRF pada semua form POST/PUT/DELETE (`@csrf`) | ✅ Aman |
+| **Otentikasi & Hashing** | Laravel Breeze dengan hashing Argon2Id / Bcrypt (`Hash::make`) | ✅ Aman |
+| **Kontrol Akses (RBAC)** | Middleware `role` & pemilahan query berdasarkan peran pengguna | ✅ Aman |
+| **Validasi Input** | Strict Form Request & Controller Validation (`mimes`, `exists`, dll.) | ✅ Aman |
+| **Keamanan Upload File** | Validasi tipe MIME, pembatasan ukuran, dan hash random filename | ✅ Aman |
+| **Keamanan API Eksternal** | Isolasi API Key via `.env` dan proteksi timeout pada HTTP Client | ✅ Aman |

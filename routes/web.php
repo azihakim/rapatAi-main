@@ -19,7 +19,8 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
 
 
-    // Tindak Lanjut Rapat (akses: pimpinan & anggota)    
+    // Tindak Lanjut Rapat (akses: pimpinan & anggota)
+    Route::get('tindak-lanjut-rapat/{tindak_lanjut_rapat}/download-bukti', [TindakLanjutRapatController::class, 'downloadBukti'])->name('tindak-lanjut-rapat.download-bukti');
     Route::resource('tindak-lanjut-rapat', TindakLanjutRapatController::class);
 
      Route::post('/rapat/jadwal-peserta', [RapatController::class, 'jadwalPeserta'])->name('rapat.jadwal-peserta');

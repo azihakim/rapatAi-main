@@ -6,6 +6,9 @@
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
     <a href="{{ route('tindak-lanjut-rapat.create') }}" class="btn btn-primary mb-3">Tambah Tindak Lanjut</a>
     <table class="table table-bordered">
         <thead>
@@ -17,6 +20,7 @@
                 <th>Batas Waktu</th>
                 <th>Status</th>
                 <th>Progress</th>
+                <th>Bukti Progres</th>
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -30,6 +34,13 @@
                 <td>{{ $item->batas_waktu }}</td>
                 <td>{{ ucfirst($item->status) }}</td>
                 <td>{{ $item->progress }}%</td>
+                <td class="text-center">
+                    @if($item->bukti_progres)
+                        <a href="{{ route('tindak-lanjut-rapat.download-bukti', $item) }}" target="_blank" class="btn btn-success btn-sm" title="Download Bukti PDF"><i class="fas fa-file-pdf"></i> PDF</a>
+                    @else
+                        <span class="text-muted">-</span>
+                    @endif
+                </td>
                 <td>
                     <a href="{{ route('tindak-lanjut-rapat.show', $item) }}" class="btn btn-info btn-sm">Detail</a>
                     <a href="{{ route('tindak-lanjut-rapat.edit', $item) }}" class="btn btn-warning btn-sm">Edit</a>

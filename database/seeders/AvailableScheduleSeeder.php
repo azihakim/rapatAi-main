@@ -3,76 +3,105 @@
 namespace Database\Seeders;
 
 use App\Models\KetersediaanPribadi;
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class AvailableScheduleSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Seed kegiatan anggota untuk bulan Juli 2026.
      */
     public function run(): void
     {
-        $users = User::where('role_id', 3)->pluck('id')->values();
-        if ($users->isEmpty()) {
-            return;
-        }
+        // User IDs: 3 = Budi Santoso, 4 = Siti Aminah, 5 = Andi Wijaya
+        $schedules = [
+            // ========== Budi Santoso (user_id: 3) ==========
+            // Minggu 1
+            ['user_id' => 3, 'tanggal' => '2026-07-01', 'waktu_mulai' => '08:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-02', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-03', 'waktu_mulai' => '09:00', 'waktu_selesai' => '12:00'],
+            // Minggu 2
+            ['user_id' => 3, 'tanggal' => '2026-07-06', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian - Kunjungan Kerja
+            ['user_id' => 3, 'tanggal' => '2026-07-07', 'waktu_mulai' => '08:30', 'waktu_selesai' => '10:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-08', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-09', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-10', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:00'],
+            // Minggu 3
+            ['user_id' => 3, 'tanggal' => '2026-07-13', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-14', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-15', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian - Rapat Paripurna
+            ['user_id' => 3, 'tanggal' => '2026-07-16', 'waktu_mulai' => '09:30', 'waktu_selesai' => '12:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-17', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:00'],
+            // Minggu 4
+            ['user_id' => 3, 'tanggal' => '2026-07-20', 'waktu_mulai' => '08:00', 'waktu_selesai' => '11:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-21', 'waktu_mulai' => '13:30', 'waktu_selesai' => '15:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-22', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-23', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:30'],
+            ['user_id' => 3, 'tanggal' => '2026-07-24', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            // Minggu 5
+            ['user_id' => 3, 'tanggal' => '2026-07-27', 'waktu_mulai' => '09:00', 'waktu_selesai' => '12:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-29', 'waktu_mulai' => '13:00', 'waktu_selesai' => '16:00'],
+            ['user_id' => 3, 'tanggal' => '2026-07-31', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian
 
-        // Seed meeting date for AI integration testing
-        $meetingDate = '2026-05-10';
-        // Variety of slots to exercise AI recommendation logic (full-day, overlapping, and distinct slots)
-        $meetingSlots = [
-            ['full_day' => true],
-            ['start' => '08:00', 'end' => '10:00'],
-            ['start' => '09:00', 'end' => '11:00'],
-            ['start' => '13:00', 'end' => '15:00'],
-            ['start' => '14:00', 'end' => '16:00'],
+            // ========== Siti Aminah (user_id: 4) ==========
+            // Minggu 1
+            ['user_id' => 4, 'tanggal' => '2026-07-01', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-02', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-03', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:00'],
+            // Minggu 2
+            ['user_id' => 4, 'tanggal' => '2026-07-06', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:30'],
+            ['user_id' => 4, 'tanggal' => '2026-07-07', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian
+            ['user_id' => 4, 'tanggal' => '2026-07-08', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-09', 'waktu_mulai' => '13:30', 'waktu_selesai' => '15:30'],
+            ['user_id' => 4, 'tanggal' => '2026-07-10', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:00'],
+            // Minggu 3
+            ['user_id' => 4, 'tanggal' => '2026-07-13', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:30'],
+            ['user_id' => 4, 'tanggal' => '2026-07-14', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:30'],
+            ['user_id' => 4, 'tanggal' => '2026-07-15', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian - Rapat Paripurna
+            ['user_id' => 4, 'tanggal' => '2026-07-16', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-17', 'waktu_mulai' => '15:30', 'waktu_selesai' => '17:30'],
+            // Minggu 4
+            ['user_id' => 4, 'tanggal' => '2026-07-20', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-21', 'waktu_mulai' => '08:30', 'waktu_selesai' => '11:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-22', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-23', 'waktu_mulai' => '09:00', 'waktu_selesai' => '12:00'],
+            // Minggu 5
+            ['user_id' => 4, 'tanggal' => '2026-07-27', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 4, 'tanggal' => '2026-07-28', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:30'],
+            ['user_id' => 4, 'tanggal' => '2026-07-30', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:00'],
+
+            // ========== Andi Wijaya (user_id: 5) ==========
+            // Minggu 1
+            ['user_id' => 5, 'tanggal' => '2026-07-01', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:30'],
+            ['user_id' => 5, 'tanggal' => '2026-07-02', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-03', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            // Minggu 2
+            ['user_id' => 5, 'tanggal' => '2026-07-06', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-07', 'waktu_mulai' => '08:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-08', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian
+            ['user_id' => 5, 'tanggal' => '2026-07-09', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-10', 'waktu_mulai' => '08:30', 'waktu_selesai' => '10:30'],
+            // Minggu 3
+            ['user_id' => 5, 'tanggal' => '2026-07-13', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-14', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:30'],
+            ['user_id' => 5, 'tanggal' => '2026-07-15', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian - Rapat Paripurna
+            ['user_id' => 5, 'tanggal' => '2026-07-16', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-17', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:30'],
+            // Minggu 4
+            ['user_id' => 5, 'tanggal' => '2026-07-20', 'waktu_mulai' => '15:00', 'waktu_selesai' => '17:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-21', 'waktu_mulai' => '09:00', 'waktu_selesai' => '11:30'],
+            ['user_id' => 5, 'tanggal' => '2026-07-22', 'waktu_mulai' => '00:00', 'waktu_selesai' => '23:59'], // Seharian
+            ['user_id' => 5, 'tanggal' => '2026-07-23', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-24', 'waktu_mulai' => '13:00', 'waktu_selesai' => '16:00'],
+            // Minggu 5
+            ['user_id' => 5, 'tanggal' => '2026-07-28', 'waktu_mulai' => '09:00', 'waktu_selesai' => '12:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-29', 'waktu_mulai' => '14:00', 'waktu_selesai' => '16:30'],
+            ['user_id' => 5, 'tanggal' => '2026-07-30', 'waktu_mulai' => '08:00', 'waktu_selesai' => '10:00'],
+            ['user_id' => 5, 'tanggal' => '2026-07-31', 'waktu_mulai' => '13:00', 'waktu_selesai' => '15:30'],
         ];
 
-        foreach ($users as $index => $userId) {
-            $slot = $meetingSlots[$index % count($meetingSlots)];
-            $fullDay = $slot['full_day'] ?? false;
-            $start = $fullDay ? '00:00' : $slot['start'];
-            $end = $fullDay ? '23:59' : $slot['end'];
-
-            KetersediaanPribadi::create([
-                'user_id' => $userId,
-                'tanggal' => $meetingDate,
-                'waktu_mulai' => $start,
-                'waktu_selesai' => $end,
-                'full_day' => $fullDay,
-            ]);
-        }
-
-        // Additional nearby dates to provide context availability
-        $extraDates = [
-            '2026-05-08',
-            '2026-05-09',
-            '2026-05-11',
-            '2026-05-12',
-        ];
-        $extraSlots = [
-            ['08:00', '09:30'],
-            ['13:00', '15:00'],
-            ['15:00', '17:00'],
-        ];
-
-        foreach ($users as $index => $userId) {
-            foreach ($extraDates as $dateIndex => $date) {
-                $slot = $extraSlots[($index + $dateIndex) % count($extraSlots)];
-                $fullDay = ($index === 0 && $date === '2025-09-09');
-                $start = $fullDay ? '00:00' : $slot[0];
-                $end = $fullDay ? '23:59' : $slot[1];
-
-                KetersediaanPribadi::create([
-                    'user_id' => $userId,
-                    'tanggal' => $date,
-                    'waktu_mulai' => $start,
-                    'waktu_selesai' => $end,
-                    'full_day' => $fullDay,
-                ]);
-            }
+        foreach ($schedules as $schedule) {
+            KetersediaanPribadi::create($schedule);
         }
     }
 }

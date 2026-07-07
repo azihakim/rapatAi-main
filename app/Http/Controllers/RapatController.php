@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\JadwalRapatHari;
 use App\Models\KetersediaanPribadi;
 use App\Models\Notification;
 use App\Models\Rapat;
@@ -25,14 +26,36 @@ class RapatController extends Controller
         })->get();
 
         if (Request()->ajax()) {
-            $rapat = Rapat::latest()->get();
+            $rapat = Rapat::with('jadwalHari')->latest()->get();
             return datatables()->of($rapat)
                 ->addIndexColumn()
                 ->addColumn('tanggal_rapat', function ($row) {
                     Carbon::setLocale('id');
-                    return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
+                    $tanggalMulai = Carbon::parse($row->tanggal)->translatedFormat('d F Y');
+                    if ($row->tanggal_selesai && $row->tanggal_selesai !== $row->tanggal) {
+                        $tanggalSelesai = Carbon::parse($row->tanggal_selesai)->translatedFormat('d F Y');
+                        return $tanggalMulai . ' s.d ' . $tanggalSelesai;
+                    }
+                    return $tanggalMulai;
                 })
                 ->addColumn('waktu_rapat', function ($row) {
+                    // Jika ada jadwal per hari, tampilkan dari situ
+                    if ($row->jadwalHari && $row->jadwalHari->count() > 0) {
+                        if ($row->jadwalHari->count() === 1) {
+                            $h = $row->jadwalHari->first();
+                            return date('H:i', strtotime($h->jam_mulai)) . ' - ' . date('H:i', strtotime($h->jam_selesai)) . ' WIB';
+                        }
+                        // Multi hari — tampilkan ringkasan
+                        $lines = [];
+                        foreach ($row->jadwalHari as $h) {
+                            Carbon::setLocale('id');
+                            $hariTgl = Carbon::parse($h->tanggal)->translatedFormat('d/m');
+                            $lines[] = $hariTgl . ': ' . date('H:i', strtotime($h->jam_mulai)) . '-' . date('H:i', strtotime($h->jam_selesai));
+                        }
+                        return implode(' | ', $lines) . ' WIB';
+                    }
+
+                    // Fallback ke kolom lama
                     $jamMulai = $row->jam_mulai ?? $row->waktu;
                     $jamSelesai = $row->jam_selesai;
 
@@ -87,8 +110,7 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'jam_mulai' => 'required|date_format:H:i',
-            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
             'lokasi' => 'required|string|max:255',
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
@@ -98,16 +120,24 @@ class RapatController extends Controller
             'hal' => 'required|string|max:255',
             'penandatangan_id' => 'required|exists:users,id',
             'sifat' => 'required|string|max:255',
+            'jadwal_hari' => 'required|array|min:1',
+            'jadwal_hari.*.tanggal' => 'required|date',
+            'jadwal_hari.*.jam_mulai' => 'required|date_format:H:i',
+            'jadwal_hari.*.jam_selesai' => 'required|date_format:H:i|after:jadwal_hari.*.jam_mulai',
         ]);
 
         $generateNomorSurat = Rapat::max('id') + 1;
         $nomorSurat = 'SURAT/RA/01/' . $generateNomorSurat;
 
+        // Ambil data hari pertama untuk backward compatibility
+        $hariPertama = $request->jadwal_hari[0];
+
         $rapat = Rapat::create([
             'tanggal' => $request->tanggal,
-            'waktu' => $request->jam_mulai,
-            'jam_mulai' => $request->jam_mulai,
-            'jam_selesai' => $request->jam_selesai,
+            'tanggal_selesai' => $request->tanggal_selesai,
+            'waktu' => $hariPertama['jam_mulai'],
+            'jam_mulai' => $hariPertama['jam_mulai'],
+            'jam_selesai' => $hariPertama['jam_selesai'],
             'lokasi' => $request->lokasi,
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
@@ -118,6 +148,15 @@ class RapatController extends Controller
             'sifat' => $request->sifat,
             'nomor' => $nomorSurat,
         ]);
+
+        // Simpan jadwal per hari
+        foreach ($request->jadwal_hari as $jadwal) {
+            $rapat->jadwalHari()->create([
+                'tanggal' => $jadwal['tanggal'],
+                'jam_mulai' => $jadwal['jam_mulai'],
+                'jam_selesai' => $jadwal['jam_selesai'],
+            ]);
+        }
 
         $notif = Notification::create([
             'title' => 'Pengajuan Rapat Baru',
@@ -153,7 +192,7 @@ class RapatController extends Controller
     public function show($id)
     {
         try {
-            $rapat = Rapat::with('pesertaRapat.user')->findOrFail($id);
+            $rapat = Rapat::with(['pesertaRapat.user', 'jadwalHari'])->findOrFail($id);
             return response()->json([
                 'status' => true,
                 'message' => 'Data Berhasil diambil',
@@ -172,8 +211,7 @@ class RapatController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'jam_mulai' => 'required|date_format:H:i',
-            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
             'lokasi' => 'required|string|max:255',
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
@@ -183,15 +221,24 @@ class RapatController extends Controller
             'hal' => 'required|string|max:255',
             'penandatangan_id' => 'required|exists:users,id',
             'sifat' => 'required|string|max:255',
+            'jadwal_hari' => 'required|array|min:1',
+            'jadwal_hari.*.tanggal' => 'required|date',
+            'jadwal_hari.*.jam_mulai' => 'required|date_format:H:i',
+            'jadwal_hari.*.jam_selesai' => 'required|date_format:H:i|after:jadwal_hari.*.jam_mulai',
         ]);
 
         try {
             $rapat = Rapat::findOrFail($id);
+
+            // Ambil data hari pertama untuk backward compatibility
+            $hariPertama = $request->jadwal_hari[0];
+
             $rapat->update([
                 'tanggal' => $request->tanggal,
-                'waktu' => $request->jam_mulai,
-                'jam_mulai' => $request->jam_mulai,
-                'jam_selesai' => $request->jam_selesai,
+                'tanggal_selesai' => $request->tanggal_selesai,
+                'waktu' => $hariPertama['jam_mulai'],
+                'jam_mulai' => $hariPertama['jam_mulai'],
+                'jam_selesai' => $hariPertama['jam_selesai'],
                 'lokasi' => $request->lokasi,
                 'judul' => $request->judul,
                 'deskripsi' => $request->deskripsi,
@@ -200,6 +247,16 @@ class RapatController extends Controller
                 'penandatangan_id' => $request->penandatangan_id,
                 'sifat' => $request->sifat,
             ]);
+
+            // Sync jadwal per hari — hapus lama, insert baru
+            $rapat->jadwalHari()->delete();
+            foreach ($request->jadwal_hari as $jadwal) {
+                $rapat->jadwalHari()->create([
+                    'tanggal' => $jadwal['tanggal'],
+                    'jam_mulai' => $jadwal['jam_mulai'],
+                    'jam_selesai' => $jadwal['jam_selesai'],
+                ]);
+            }
 
             // Sync peserta rapat
             $rapat->pesertaRapat()->delete(); // Hapus peserta lama
@@ -225,6 +282,7 @@ class RapatController extends Controller
     {
         try {
             $rapat = Rapat::findOrFail($id);
+            $rapat->jadwalHari()->delete(); // Hapus jadwal per hari
             $rapat->pesertaRapat()->delete(); // Hapus peserta rapat terkait
             $rapat->delete();
 
@@ -246,11 +304,15 @@ class RapatController extends Controller
             'peserta' => 'required|array',
             'duration' => 'required|string',
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
         ]);
 
+        $tanggalMulai = $request->tanggal;
+        $tanggalSelesai = $request->tanggal_selesai ?? $request->tanggal;
+
         $availabilities = User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
-                $q->where('tanggal', $request->tanggal);
+            ->with(['ketersediaanPribadi' => function ($q) use ($tanggalMulai, $tanggalSelesai) {
+                $q->whereBetween('tanggal', [$tanggalMulai, $tanggalSelesai]);
             }])
             ->get()
             ->map(function ($user) {
@@ -266,7 +328,7 @@ class RapatController extends Controller
                 ];
             })->toArray();
 
-        $result = $ai->generateMeetingRecommendation($availabilities, $request->duration . " hour", $request->tanggal);
+        $result = $ai->generateMeetingRecommendation($availabilities, $request->duration . " hour", $tanggalMulai, $tanggalSelesai);
 
         return response()->json([
             'status' => 'success',
@@ -279,11 +341,15 @@ class RapatController extends Controller
         $request->validate([
             'peserta' => 'required|array|min:1',
             'tanggal' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal',
         ]);
 
+        $tanggalMulai = $request->tanggal;
+        $tanggalSelesai = $request->tanggal_selesai ?? $request->tanggal;
+
         $users = \App\Models\User::whereIn('id', $request->peserta)
-            ->with(['ketersediaanPribadi' => function ($q) use ($request) {
-                $q->where('tanggal', $request->tanggal);
+            ->with(['ketersediaanPribadi' => function ($q) use ($tanggalMulai, $tanggalSelesai) {
+                $q->whereBetween('tanggal', [$tanggalMulai, $tanggalSelesai]);
             }])->get();
 
         $result = $users->map(function ($user) {

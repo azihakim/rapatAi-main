@@ -21,7 +21,19 @@ class ApprovalController extends Controller
  public function viewSuratUndanganRapat($id)
  {
   try {
-   $rapat = Rapat::findOrFail($id);
+   $rapat = Rapat::with('jadwalHari')->findOrFail($id);
+
+   // Format jadwal per hari untuk surat
+   $jadwalHariFormatted = [];
+   if ($rapat->jadwalHari && $rapat->jadwalHari->count() > 0) {
+    foreach ($rapat->jadwalHari as $h) {
+     $jadwalHariFormatted[] = [
+      'tanggal' => $this->formatTanggalIndonesia($h->tanggal),
+      'jam_mulai' => date('H:i', strtotime($h->jam_mulai)),
+      'jam_selesai' => date('H:i', strtotime($h->jam_selesai)),
+     ];
+    }
+   }
 
    // Format data untuk surat
    $suratData = [
@@ -35,10 +47,11 @@ class ApprovalController extends Controller
      $query->where('name', 'pimpinan');
     })->value('nip'),
     'agenda' => $rapat->deskripsi ?? 'Agenda akan disampaikan dalam rapat',
-    'tanggalRapat' => $this->formatTanggalIndonesia($rapat->tanggal),
+    'tanggalRapat' => $this->formatTanggalRangeIndonesia($rapat->tanggal, $rapat->tanggal_selesai),
     'jamMulai' => $rapat->jam_mulai ?? $rapat->waktu,
     'jamSelesai' => $rapat->jam_selesai,
     'waktu' => $this->formatWaktuRapat($rapat),
+    'jadwalHari' => $jadwalHariFormatted,
     'tempat' => $rapat->lokasi ?? 'Ruang Rapat DPRD Provinsi Sumatera Selatan',
     'penandatangan' => User::with('role')->whereHas('role', function ($query) {
      $query->where('name', 'pimpinan');
@@ -82,7 +95,7 @@ class ApprovalController extends Controller
     'title'   => $validated['status'] == 2 ? 'Undangan Rapat Baru' : 'Status Rapat Diperbarui',
     'message' => $validated['status'] == 2
      ? 'Anda diundang untuk menghadiri rapat "' . $rapat->judul . '" yang akan dilaksanakan pada '
-     . Carbon::parse($rapat->tanggal)->translatedFormat('d F Y') .
+     . $this->formatTanggalRangeNotifikasi($rapat->tanggal, $rapat->tanggal_selesai) .
      ' pukul ' . $this->formatWaktuRapat($rapat) . ' di '
      . ($rapat->lokasi ?? 'Ruang rapat') . '.'
      : 'Rapat dengan judul "' . $rapat->judul . '" telah ' . $statusText . ' oleh pimpinan.',
@@ -194,6 +207,31 @@ class ApprovalController extends Controller
 
   return '-';
  }
+
+  /**
+   * Format tanggal range untuk surat undangan (format Indonesia lengkap dengan hari).
+   */
+  private function formatTanggalRangeIndonesia($tanggalMulai, $tanggalSelesai)
+  {
+   $formatted = $this->formatTanggalIndonesia($tanggalMulai);
+   if ($tanggalSelesai && $tanggalSelesai !== $tanggalMulai) {
+    $formatted .= ' s.d ' . $this->formatTanggalIndonesia($tanggalSelesai);
+   }
+   return $formatted;
+  }
+
+  /**
+   * Format tanggal range untuk notifikasi (format singkat tanpa hari).
+   */
+  private function formatTanggalRangeNotifikasi($tanggalMulai, $tanggalSelesai)
+  {
+   Carbon::setLocale('id');
+   $formatted = Carbon::parse($tanggalMulai)->translatedFormat('d F Y');
+   if ($tanggalSelesai && $tanggalSelesai !== $tanggalMulai) {
+    $formatted .= ' s.d ' . Carbon::parse($tanggalSelesai)->translatedFormat('d F Y');
+   }
+   return $formatted;
+  }
 
  public function viewApproveNotulen()
  {

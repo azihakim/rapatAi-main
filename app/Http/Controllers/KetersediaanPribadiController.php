@@ -20,28 +20,49 @@ class KetersediaanPribadiController extends Controller
   }
 
   if (Request()->ajax()) {
-   return datatables()->of($availablePersonal)
-    ->addIndexColumn()
-    ->addColumn('nama', function ($row) {
-     return $row->user->name;
-    })
-    ->addColumn('tanggal', function ($row) {
-     Carbon::setLocale('id');
-     return Carbon::parse($row->tanggal)->translatedFormat('d F Y');
-    })
-    ->addColumn('waktu_mulai', function ($row) {
-     return date('H:i', strtotime($row->waktu_mulai));
-    })
-    ->addColumn('waktu_selesai', function ($row) {
-     return date('H:i', strtotime($row->waktu_selesai));
-    })
-    ->addColumn('action', function ($row) {
-     $btn = '<button type="button" class="btn btn-primary btn-sm editKetersediaanPribadi" data-id="' . $row->id . '">Edit</button>';
-     $btn .= ' <button type="button" class="deleteKetersediaanPribadi btn btn-danger btn-sm" data-id="' . $row->id . '">Delete</button>';
-     return $btn;
-    })
-    ->rawColumns(['action'])
-    ->toJson();
+   // Return FullCalendar-compatible events format
+   Carbon::setLocale('id');
+   $events = $availablePersonal->map(function ($item) {
+    $startTime = date('H:i', strtotime($item->waktu_mulai));
+    $endTime = date('H:i', strtotime($item->waktu_selesai));
+    $isFullDay = ($startTime === '00:00' && $endTime === '23:59');
+
+    // Color coding based on time period
+    if ($isFullDay) {
+     $bgColor = '#6f42c1'; // purple - full day
+    } elseif (strtotime($startTime) < strtotime('12:00')) {
+     $bgColor = '#4e73df'; // blue - morning
+    } elseif (strtotime($startTime) < strtotime('15:00')) {
+     $bgColor = '#1cc88a'; // green - afternoon
+    } else {
+     $bgColor = '#f6c23e'; // yellow/orange - evening
+    }
+
+    $title = ($item->user ? $item->user->name : 'Unknown') . ' (' . $startTime . '-' . $endTime . ')';
+
+    return [
+     'id' => $item->id,
+     'title' => $title,
+     'start' => $item->tanggal . 'T' . $item->waktu_mulai,
+     'end' => $item->tanggal . 'T' . $item->waktu_selesai,
+     'allDay' => $isFullDay,
+     'backgroundColor' => $bgColor,
+     'borderColor' => $bgColor,
+     'textColor' => ($bgColor === '#f6c23e') ? '#2d3436' : '#fff',
+     'extendedProps' => [
+      'ketersediaan_id' => $item->id,
+      'user_id' => $item->user_id,
+      'nama' => $item->user ? $item->user->name : 'Unknown',
+      'tanggal' => Carbon::parse($item->tanggal)->translatedFormat('l, d F Y'),
+      'tanggal_raw' => $item->tanggal,
+      'waktu_mulai' => $startTime,
+      'waktu_selesai' => $endTime,
+      'is_full_day' => $isFullDay,
+     ],
+    ];
+   });
+
+   return response()->json($events->values());
   }
 
   return view('ketersediaan.index');

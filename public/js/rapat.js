@@ -3,6 +3,10 @@ var save_method;
 let myData = {};
 const urls = "/rapat";
 
+// Nama hari dalam bahasa Indonesia
+const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
 jQuery(function () {
     myData._token = $('meta[name="csrf-token"]').attr("content");
 });
@@ -13,12 +17,98 @@ $(document).on("hidden.bs.modal", ".modal", function () {
     }
 });
 
+/**
+ * Format tanggal ke bahasa Indonesia
+ */
+function formatTanggalId(dateStr) {
+    var d = new Date(dateStr);
+    return namaHari[d.getDay()] + ', ' + d.getDate() + ' ' + namaBulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+/**
+ * Format tanggal singkat
+ */
+function formatTanggalSingkat(dateStr) {
+    var d = new Date(dateStr);
+    return d.getDate() + ' ' + namaBulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+/**
+ * Generate daftar tanggal dalam range
+ */
+function getDateRange(startDate, endDate) {
+    var dates = [];
+    var current = new Date(startDate);
+    var end = endDate ? new Date(endDate) : new Date(startDate);
+
+    while (current <= end) {
+        dates.push(current.toISOString().split('T')[0]); // format YYYY-MM-DD
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+/**
+ * Generate input jadwal per hari berdasarkan range tanggal
+ * @param {Array} existingData - Data jadwal yang sudah ada (untuk edit mode)
+ */
+function generateJadwalPerHari(existingData) {
+    var tanggalMulai = $("#tanggal").val();
+    var tanggalSelesai = $("#tanggal_selesai").val();
+    var container = $("#jadwalPerHariContainer");
+
+    if (!tanggalMulai) {
+        container.html('<em class="text-muted">Pilih tanggal mulai untuk menentukan jadwal per hari.</em>');
+        return;
+    }
+
+    var dates = getDateRange(tanggalMulai, tanggalSelesai || tanggalMulai);
+
+    var html = '';
+    dates.forEach(function (date, index) {
+        var jamMulai = '';
+        var jamSelesai = '';
+
+        // Cari data existing jika ada (edit mode)
+        if (existingData && existingData.length > 0) {
+            var existing = existingData.find(function (j) {
+                return j.tanggal === date;
+            });
+            if (existing) {
+                jamMulai = existing.jam_mulai || '';
+                jamSelesai = existing.jam_selesai || '';
+                // Pastikan format HH:mm (tanpa detik)
+                if (jamMulai.length > 5) jamMulai = jamMulai.substring(0, 5);
+                if (jamSelesai.length > 5) jamSelesai = jamSelesai.substring(0, 5);
+            }
+        }
+
+        html += '<div class="jadwal-hari-row">';
+        html += '  <div class="hari-label"><span class="badge-hari">Hari ' + (index + 1) + '</span>' + formatTanggalId(date) + '</div>';
+        html += '  <input type="hidden" name="jadwal_hari[' + index + '][tanggal]" value="' + date + '">';
+        html += '  <div class="row">';
+        html += '    <div class="col-6">';
+        html += '      <label class="form-label small mb-1">Jam Mulai <span class="text-danger">*</span></label>';
+        html += '      <input type="time" class="form-control form-control-sm" name="jadwal_hari[' + index + '][jam_mulai]" value="' + jamMulai + '" required>';
+        html += '    </div>';
+        html += '    <div class="col-6">';
+        html += '      <label class="form-label small mb-1">Jam Selesai <span class="text-danger">*</span></label>';
+        html += '      <input type="time" class="form-control form-control-sm" name="jadwal_hari[' + index + '][jam_selesai]" value="' + jamSelesai + '" required>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+    });
+
+    container.html(html);
+}
+
 function fetchJadwalPeserta() {
     let pesertaIds = [];
     $(".checkboxPeserta:checked").each(function () {
         pesertaIds.push($(this).val());
     });
     let tanggal = $("#tanggal").val();
+    let tanggalSelesai = $("#tanggal_selesai").val();
     if (pesertaIds.length === 0 || !tanggal) {
         $("#jadwalPesertaTerpilih").html(
             "<em>Pilih peserta dan tanggal rapat untuk melihat jadwal ketersediaan mereka.</em>",
@@ -35,6 +125,7 @@ function fetchJadwalPeserta() {
             _token: $('meta[name="csrf-token"]').attr("content"),
             peserta: pesertaIds,
             tanggal: tanggal,
+            tanggal_selesai: tanggalSelesai || null,
         },
         success: function (res) {
             let html = "";
@@ -66,7 +157,28 @@ function fetchJadwalPeserta() {
 }
 
 // Trigger fetch jadwal saat peserta atau tanggal berubah
-$(document).on("change", ".checkboxPeserta, #tanggal", fetchJadwalPeserta);
+$(document).on("change", ".checkboxPeserta, #tanggal, #tanggal_selesai", fetchJadwalPeserta);
+
+// Generate jadwal per hari & validasi saat tanggal berubah
+$(document).on("change", "#tanggal, #tanggal_selesai", function () {
+    var tanggalMulai = $("#tanggal").val();
+    var tanggalSelesai = $("#tanggal_selesai").val();
+
+    // Validasi tanggal selesai >= tanggal mulai
+    if (tanggalMulai && tanggalSelesai && tanggalSelesai < tanggalMulai) {
+        $("#tanggal_selesai").val("");
+        toastr.warning("Tanggal selesai harus sama atau setelah tanggal mulai.");
+        tanggalSelesai = "";
+    }
+
+    // Set min date pada tanggal_selesai
+    if (tanggalMulai) {
+        $("#tanggal_selesai").attr("min", tanggalMulai);
+    }
+
+    // Generate jadwal per hari
+    generateJadwalPerHari();
+});
 
 $(document).ready(function () {
     initTableRapat();
@@ -104,8 +216,12 @@ $(document).on("click", ".editRapat", function () {
 $("#modalRapat").on("hidden.bs.modal", function () {
     $("#formTambahRapat")[0].reset();
     $("#id").val("");
+    $("#tanggal_selesai").val("");
     $(".modal-title").text("");
     save_method = "";
+
+    // Reset jadwal per hari container
+    $("#jadwalPerHariContainer").html('<em class="text-muted">Pilih tanggal mulai untuk menentukan jadwal per hari.</em>');
 
     var form = $("#formTambahRapat");
     form.validate().resetForm();
@@ -222,8 +338,7 @@ function showSelectedData(id) {
             const data = response.data || {};
             $("#id").val(data.id || "");
             $("#tanggal").val(data.tanggal || "");
-            $("#jam_mulai").val(data.jam_mulai || data.waktu || "");
-            $("#jam_selesai").val(data.jam_selesai || "");
+            $("#tanggal_selesai").val(data.tanggal_selesai || "");
             $("#lokasi").val(data.lokasi || "");
             $("#judul").val(data.judul || "");
             $("#deskripsi").val(data.deskripsi || "");
@@ -231,6 +346,10 @@ function showSelectedData(id) {
             $("#hal").val(data.hal || "");
             $("#penandatangan_id").val(data.penandatangan_id || "");
             $("#sifat").val(data.sifat || "");
+
+            // Generate jadwal per hari dengan data existing
+            var jadwalData = data.jadwal_hari || [];
+            generateJadwalPerHari(jadwalData);
 
             $(
                 "#peserta_" +
@@ -335,13 +454,14 @@ $("#btnGenerateRekomendasi").on("click", function () {
             peserta: pesertaIds,
             duration: durasi,
             tanggal: $("#tanggal").val(),
+            tanggal_selesai: $("#tanggal_selesai").val() || null,
         },
         success: function (res) {
             // Hapus isi textarea
             $("#hasilRekomendasi").val("");
 
             // Animasi typing
-            let text = JSON.stringify(res.recommendation, null, 2);
+            let text = typeof res.recommendation === 'string' ? res.recommendation : JSON.stringify(res.recommendation, null, 2);
             let i = 0;
             function typeWriter() {
                 if (i < text.length) {

@@ -1,0 +1,656 @@
+# SPESIFIKASI DAN DAFTAR UNTUK PEMBUATAN CLASS DIAGRAM (SISTEM RAPAT AI)
+
+Dokumen ini berisi spesifikasi lengkap yang dapat digunakan untuk membuat **Class Diagram** untuk proyek Laravel ini. Penyusunan daftar dilakukan berdasarkan analisis terhadap:
+1. **Model** (`app\Models`) beserta struktur atribut dari **Migration** (`database\migrations`).
+2. **Controller** (`app\Http\Controllers`, tidak termasuk folder `Auth`) beserta metode/fungsi dan parameternya.
+3. **Relasi antar Kelas** (Model-to-Model dan Controller-to-Model Dependencies).
+
+---
+
+## I. DAFTAR KELAS: MODEL (BERDASARKAN `app\Models` & `database\migrations`)
+
+Setiap kelas Model disertai oleh daftar atribut/properti (dari tabel database) dan metode relasi Eloquent.
+*Notasi visibilitas: `-` (private/protected attribute), `+` (public method/attribute).*
+
+### 1. `App\Models\Role`
+* **Tabel Database**: `roles`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- name : string`
+  * `- description : string (nullable)`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ users() : HasMany<User>`
+
+---
+
+### 2. `App\Models\User`
+* **Tabel Database**: `users`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- name : string`
+  * `- email : string` *(Unique)*
+  * `- email_verified_at : timestamp (nullable)`
+  * `- password : string`
+  * `- role_id : unsignedBigInteger (nullable)` **(FK -> roles.id)**
+  * `- jabatan : string (nullable)`
+  * `- komisi : string (nullable)`
+  * `- foto_ttd : string (nullable)`
+  * `- nip : string (nullable)`
+  * `- remember_token : string (nullable)`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ role() : BelongsTo<Role>`
+  * `+ ketersediaanPribadi() : HasMany<KetersediaanPribadi>`
+  * `+ notifications() : BelongsToMany<Notification>` *(via pivot `user_notifications`)*
+
+---
+
+### 3. `App\Models\Rapat`
+* **Tabel Database**: `rapats`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- judul : string`
+  * `- nomor : string (nullable)`
+  * `- hal : string (nullable)`
+  * `- sifat : string (nullable)`
+  * `- deskripsi : text (nullable)`
+  * `- tanggal : date`
+  * `- jam_mulai : time (nullable)`
+  * `- jam_selesai : time (nullable)`
+  * `- waktu : time`
+  * `- lokasi : string`
+  * `- jenis_rapat : string`
+  * `- status : tinyInteger` *(Default: 1)*
+  * `- penandatangan_id : unsignedBigInteger (nullable)` **(FK -> users.id)**
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ pesertaRapat() : HasMany<PesertaRapat>`
+  * `+ notulensis() : HasMany<Notulensi>` *(implisit dari relasi balik)*
+  * `+ pengajuanLogistiks() : HasMany<PengajuanLogistik>` *(implisit dari relasi balik)*
+  * `+ tindakLanjutRapats() : HasMany<TindakLanjutRapat>` *(implisit dari relasi balik)*
+  * `+ penandatangan() : BelongsTo<User>` *(implisit dari FK `penandatangan_id`)*
+
+---
+
+### 4. `App\Models\PesertaRapat`
+* **Tabel Database**: `peserta_rapats`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- rapat_id : unsignedBigInteger` **(FK -> rapats.id)**
+  * `- user_id : unsignedBigInteger` **(FK -> users.id)**
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ rapat() : BelongsTo<Rapat>`
+  * `+ user() : BelongsTo<User>`
+
+---
+
+### 5. `App\Models\KetersediaanPribadi`
+* **Tabel Database**: `ketersediaan_pribadis`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- user_id : unsignedBigInteger` **(FK -> users.id)**
+  * `- tanggal : date`
+  * `- waktu_mulai : time`
+  * `- waktu_selesai : time`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ user() : BelongsTo<User>`
+
+---
+
+### 6. `App\Models\Notulensi`
+* **Tabel Database**: `notulensis`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- rapat_id : unsignedBigInteger` **(FK -> rapats.id)**
+  * `- isi : text`
+  * `- status : string` *(Default: 'draft')*
+  * `- file_path : string (nullable)`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ rapat() : BelongsTo<Rapat>`
+
+---
+
+### 7. `App\Models\PengajuanLogistik`
+* **Tabel Database**: `pengajuan_logistiks`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- rapat_id : unsignedBigInteger` **(FK -> rapats.id)**
+  * `- user_id : unsignedBigInteger` **(FK -> users.id)**
+  * `- jenis_pengajuan : string`
+  * `- keterangan : text (nullable)`
+  * `- status : string` *(Default: 'draft')*
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ rapat() : BelongsTo<Rapat>`
+  * `+ user() : BelongsTo<User>`
+  * `+ details() : HasMany<DetailLogistik>`
+
+---
+
+### 8. `App\Models\DetailLogistik`
+* **Tabel Database**: `detail_logistiks`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- pengajuan_logistik_id : unsignedBigInteger` **(FK -> pengajuan_logistiks.id)**
+  * `- item : string`
+  * `- jumlah : integer`
+  * `- satuan : string`
+  * `- keterangan : text (nullable)`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ logistik() : BelongsTo<PengajuanLogistik>`
+
+---
+
+### 9. `App\Models\TindakLanjutRapat`
+* **Tabel Database**: `tindak_lanjut_rapats`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- rapat_id : unsignedBigInteger` **(FK -> rapats.id)**
+  * `- user_id : unsignedBigInteger` **(FK -> users.id)**
+  * `- deskripsi : text`
+  * `- batas_waktu : date`
+  * `- status : string` *(Default: 'pending')*
+  * `- progress : integer` *(Default: 0)*
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ rapat() : BelongsTo<Rapat>`
+  * `+ user() : BelongsTo<User>`
+
+---
+
+### 10. `App\Models\Notification`
+* **Tabel Database**: `notifications`
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- title : string`
+  * `- message : text`
+  * `- type : string`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ users() : BelongsToMany<User>` *(via pivot `user_notifications`)*
+
+---
+
+### 11. `App\Models\UserNotification`
+* **Tabel Database**: `user_notifications` *(Pivot Table Class)*
+* **Atribut (Properti)**:
+  * `- id : unsignedBigInteger` **(PK)**
+  * `- notification_id : unsignedBigInteger` **(FK -> notifications.id)**
+  * `- user_id : unsignedBigInteger` **(FK -> users.id)**
+  * `- is_read : boolean` *(Default: false)*
+  * `- read_at : timestamp (nullable)`
+  * `- created_at : timestamp`
+  * `- updated_at : timestamp`
+* **Metode Relasi**:
+  * `+ notification() : BelongsTo<Notification>`
+  * `+ user() : BelongsTo<User>` *(implisit dari struktur tabel)*
+
+---
+---
+
+## II. DAFTAR KELAS: CONTROLLER (BERDASARKAN `app\Http\Controllers`, TANPA `Auth`)
+
+Setiap kelas Controller mewarisi (extends) dari kelas abstrak `Controller`.
+*Notasi visibilitas: `-` (private method), `+` (public method).*
+
+### 1. `App\Http\Controllers\Controller` *(Abstract Base Class)*
+* Kelas dasar untuk semua controller di dalam aplikasi.
+
+---
+
+### 2. `App\Http\Controllers\ApprovalController`
+* **Metode / Fungsi**:
+  * `+ approveRapatView() : View`
+  * `+ viewSuratUndanganRapat(id : int) : JsonResponse`
+  * `+ updateStatus(request : Request, id : int) : JsonResponse`
+  * `- formatTanggalSurat(date : string) : string`
+  * `- formatTanggalIndonesia(date : string) : string`
+  * `- formatWaktuRapat(rapat : Rapat) : string`
+  * `+ viewApproveNotulen() : View`
+  * `+ detailViewNotulen(id : int) : JsonResponse`
+  * `+ updateStatusNotulen(request : Request, id : int) : JsonResponse`
+  * `+ viewApprovalLogistik() : View`
+  * `+ updateStatusLogistik(request : Request, id : int) : JsonResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `Rapat`, `Notulensi`, `PengajuanLogistik`, `Notification`, `User`
+
+---
+
+### 3. `App\Http\Controllers\DashboardController`
+* **Metode / Fungsi**:
+  * `+ index() : View`
+  * `- mapJenisRapat(jenisRapat : string) : string`
+  * `+ store(request : Request) : JsonResponse`
+  * `+ update(request : Request, id : int) : JsonResponse`
+  * `+ destroy(id : int) : JsonResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `Rapat`, `PesertaRapat`, `User`
+
+---
+
+### 4. `App\Http\Controllers\KetersediaanPribadiController`
+* **Metode / Fungsi**:
+  * `+ index() : View | JsonResponse`
+  * `+ store(request : Request) : JsonResponse`
+  * `+ show(id : int) : JsonResponse`
+  * `+ update(request : Request, id : int) : JsonResponse`
+  * `+ destroy(id : int) : JsonResponse`
+  * `- validateAvailabilityRequest(request : Request) : array`
+* **Ketergantungan Model (Dependencies)**:
+  * `KetersediaanPribadi`
+
+---
+
+### 5. `App\Http\Controllers\NotificationController`
+* **Metode / Fungsi**:
+  * `+ index(request : Request) : View | JsonResponse`
+  * `+ markAsRead(request : Request, id : int) : JsonResponse`
+  * `+ markAllAsRead() : JsonResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `Notification`, `UserNotification`
+
+---
+
+### 6. `App\Http\Controllers\NotulensiController`
+* **Metode / Fungsi**:
+  * `+ index() : View | JsonResponse`
+  * `+ store(request : Request) : JsonResponse`
+  * `+ show(id : int) : JsonResponse`
+  * `+ update(request : Request, id : int) : JsonResponse`
+  * `+ destroy(id : int) : JsonResponse`
+  * `+ generateAudioToText(request : Request, aiservice : AIService) : JsonResponse`
+* **Ketergantungan Model & Service (Dependencies)**:
+  * `Notulensi`, `Rapat`, `AIService`
+
+---
+
+### 7. `App\Http\Controllers\PengajuanLogistikController`
+* **Metode / Fungsi**:
+  * `+ index() : View | JsonResponse`
+  * `+ store(request : Request) : JsonResponse`
+  * `+ show(id : int) : JsonResponse`
+  * `+ update(request : Request, id : int) : JsonResponse`
+  * `+ destroy(id : int) : JsonResponse`
+  * `+ pengajuanSebelumnya(rapatId : int) : JsonResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `PengajuanLogistik`, `Rapat`, `DetailLogistik`
+
+---
+
+### 8. `App\Http\Controllers\ProfileController`
+* **Metode / Fungsi**:
+  * `+ edit(request : Request) : View`
+  * `+ update(request : ProfileUpdateRequest) : RedirectResponse`
+  * `+ destroy(request : Request) : RedirectResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `User` *(via Request object)*
+
+---
+
+### 9. `App\Http\Controllers\RapatController`
+* **Metode / Fungsi**:
+  * `+ index() : View | JsonResponse`
+  * `+ store(request : Request) : JsonResponse`
+  * `+ show(id : int) : JsonResponse`
+  * `+ update(request : Request, id : int) : JsonResponse`
+  * `+ destroy(id : int) : JsonResponse`
+  * `+ rekomendasiJadwal(request : Request, ai : AIService) : JsonResponse`
+  * `+ jadwalPeserta(request : Request) : JsonResponse`
+* **Ketergantungan Model & Service (Dependencies)**:
+  * `Rapat`, `User`, `Notification`, `PesertaRapat`, `KetersediaanPribadi`, `AIService`
+
+---
+
+### 10. `App\Http\Controllers\TindakLanjutRapatController`
+* **Metode / Fungsi**:
+  * `+ index() : View`
+  * `+ create() : View`
+  * `+ store(request : Request) : RedirectResponse`
+  * `+ show(tindak_lanjut_rapat : TindakLanjutRapat) : View`
+  * `+ edit(tindak_lanjut_rapat : TindakLanjutRapat) : View`
+  * `+ update(request : Request, tindak_lanjut_rapat : TindakLanjutRapat) : RedirectResponse`
+  * `+ destroy(tindak_lanjut_rapat : TindakLanjutRapat) : RedirectResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `TindakLanjutRapat`, `Rapat`, `User`
+
+---
+
+### 11. `App\Http\Controllers\UserController`
+* **Metode / Fungsi**:
+  * `+ index() : View`
+  * `+ create() : View`
+  * `+ store(request : Request) : RedirectResponse`
+  * `+ show(user : User) : View`
+  * `+ edit(user : User) : View`
+  * `+ update(request : Request, user : User) : RedirectResponse`
+  * `+ destroy(user : User) : RedirectResponse`
+* **Ketergantungan Model (Dependencies)**:
+  * `User`, `Role`
+
+---
+---
+
+## III. DAFTAR RELASI ANTAR KELAS (RELATIONSHIPS & DEPENDENCIES)
+
+### A. Relasi Antar Model (Association / Aggregation / Composition)
+1. **`Role` (1) ---- (*) `User`**
+   * *One-to-Many*: Satu Role dapat dimiliki oleh banyak User (`role_id` di `users`).
+2. **`User` (1) ---- (*) `KetersediaanPribadi`**
+   * *One-to-Many*: Satu User dapat memiliki banyak jadwal ketersediaan pribadi (`user_id` di `ketersediaan_pribadis`).
+3. **`Rapat` (1) ---- (*) `PesertaRapat` (*) ---- (1) `User`**
+   * *Many-to-Many* (via tabel `peserta_rapats`): Satu Rapat dapat memiliki banyak peserta (User), dan satu User dapat mengikuti banyak Rapat.
+4. **`Rapat` (1) ---- (*) `Notulensi`**
+   * *One-to-Many*: Satu Rapat dapat memiliki banyak atau satu record Notulensi (`rapat_id` di `notulensis`).
+5. **`Rapat` (1) ---- (*) `PengajuanLogistik` (*) ---- (1) `User`**
+   * *One-to-Many*: Satu Rapat dapat memiliki banyak Pengajuan Logistik dari seorang User (`rapat_id` dan `user_id` di `pengajuan_logistiks`).
+6. **`PengajuanLogistik` (1) ---- (*) `DetailLogistik`**
+   * *One-to-Many Composition*: Satu Pengajuan Logistik memiliki daftar barang/detail logistik (`pengajuan_logistik_id` di `detail_logistiks`).
+7. **`Rapat` (1) ---- (*) `TindakLanjutRapat` (*) ---- (1) `User`**
+   * *One-to-Many*: Satu Rapat dapat menghasilkan beberapa daftar tindak lanjut/tugas yang ditugaskan kepada User (`rapat_id` dan `user_id` di `tindak_lanjut_rapats`).
+8. **`Notification` (*) ---- (*) `User` (via `UserNotification`)**
+   * *Many-to-Many*: Satu Notifikasi dapat dikirim ke banyak User melalui tabel pivot `user_notifications`.
+9. **`User` (1) ---- (*) `Rapat` (sebagai Penandatangan)**
+   * *One-to-Many*: Seorang User (Pimpinan) dapat menjadi penandatangan untuk banyak Rapat (`penandatangan_id` di `rapats`).
+
+---
+
+### B. Relasi Controller ke Model (Dependency / Usage)
+Dalam Class Diagram, hubungan Controller ke Model digambarkan sebagai **Dependency** (panah putus-putus dengan label `<<use>>` atau `<<instantiates>>`):
+1. **`ApprovalController`** `..>` `Rapat`, `Notulensi`, `PengajuanLogistik`, `Notification`, `User`
+2. **`DashboardController`** `..>` `Rapat`, `PesertaRapat`
+3. **`KetersediaanPribadiController`** `..>` `KetersediaanPribadi`
+4. **`NotificationController`** `..>` `Notification`, `UserNotification`
+5. **`NotulensiController`** `..>` `Notulensi`, `Rapat`
+6. **`PengajuanLogistikController`** `..>` `PengajuanLogistik`, `DetailLogistik`, `Rapat`
+7. **`ProfileController`** `..>` `User`
+8. **`RapatController`** `..>` `Rapat`, `User`, `Notification`, `PesertaRapat`, `KetersediaanPribadi`
+9. **`TindakLanjutRapatController`** `..>` `TindakLanjutRapat`, `Rapat`, `User`
+10. **`UserController`** `..>` `User`, `Role`
+
+---
+---
+
+## IV. MERMAID CLASS DIAGRAM (READY-TO-USE CODE)
+
+Berikut adalah kode Mermaid Class Diagram lengkap berdasarkan spesifikasi di atas yang dapat langsung Anda gunakan di berbagai aplikasi pembuat diagram atau Markdown reader (GitHub, VS Code, Mermaid Live Editor, dll):
+
+```mermaid
+classDiagram
+    %% Base Controller
+    class Controller {
+        <<Abstract>>
+    }
+
+    %% Controllers
+    class ApprovalController {
+        +approveRapatView() View
+        +viewSuratUndanganRapat(id: int) JsonResponse
+        +updateStatus(request: Request, id: int) JsonResponse
+        +viewApproveNotulen() View
+        +detailViewNotulen(id: int) JsonResponse
+        +updateStatusNotulen(request: Request, id: int) JsonResponse
+        +viewApprovalLogistik() View
+        +updateStatusLogistik(request: Request, id: int) JsonResponse
+        -formatTanggalSurat(date: string) string
+        -formatTanggalIndonesia(date: string) string
+        -formatWaktuRapat(rapat: Rapat) string
+    }
+
+    class DashboardController {
+        +index() View
+        +store(request: Request) JsonResponse
+        +update(request: Request, id: int) JsonResponse
+        +destroy(id: int) JsonResponse
+        -mapJenisRapat(jenisRapat: string) string
+    }
+
+    class KetersediaanPribadiController {
+        +index() View|JsonResponse
+        +store(request: Request) JsonResponse
+        +show(id: int) JsonResponse
+        +update(request: Request, id: int) JsonResponse
+        +destroy(id: int) JsonResponse
+        -validateAvailabilityRequest(request: Request) array
+    }
+
+    class NotificationController {
+        +index(request: Request) View|JsonResponse
+        +markAsRead(request: Request, id: int) JsonResponse
+        +markAllAsRead() JsonResponse
+    }
+
+    class NotulensiController {
+        +index() View|JsonResponse
+        +store(request: Request) JsonResponse
+        +show(id: int) JsonResponse
+        +update(request: Request, id: int) JsonResponse
+        +destroy(id: int) JsonResponse
+        +generateAudioToText(request: Request, aiservice: AIService) JsonResponse
+    }
+
+    class PengajuanLogistikController {
+        +index() View|JsonResponse
+        +store(request: Request) JsonResponse
+        +show(id: int) JsonResponse
+        +update(request: Request, id: int) JsonResponse
+        +destroy(id: int) JsonResponse
+        +pengajuanSebelumnya(rapatId: int) JsonResponse
+    }
+
+    class ProfileController {
+        +edit(request: Request) View
+        +update(request: ProfileUpdateRequest) RedirectResponse
+        +destroy(request: Request) RedirectResponse
+    }
+
+    class RapatController {
+        +index() View|JsonResponse
+        +store(request: Request) JsonResponse
+        +show(id: int) JsonResponse
+        +update(request: Request, id: int) JsonResponse
+        +destroy(id: int) JsonResponse
+        +rekomendasiJadwal(request: Request, ai: AIService) JsonResponse
+        +jadwalPeserta(request: Request) JsonResponse
+    }
+
+    class TindakLanjutRapatController {
+        +index() View
+        +create() View
+        +store(request: Request) RedirectResponse
+        +show(tindak_lanjut_rapat: TindakLanjutRapat) View
+        +edit(tindak_lanjut_rapat: TindakLanjutRapat) View
+        +update(request: Request, tindak_lanjut_rapat: TindakLanjutRapat) RedirectResponse
+        +destroy(tindak_lanjut_rapat: TindakLanjutRapat) RedirectResponse
+    }
+
+    class UserController {
+        +index() View
+        +create() View
+        +store(request: Request) RedirectResponse
+        +show(user: User) View
+        +edit(user: User) View
+        +update(request: Request, user: User) RedirectResponse
+        +destroy(user: User) RedirectResponse
+    }
+
+    %% Inheritance Controller
+    Controller <|-- ApprovalController
+    Controller <|-- DashboardController
+    Controller <|-- KetersediaanPribadiController
+    Controller <|-- NotificationController
+    Controller <|-- NotulensiController
+    Controller <|-- PengajuanLogistikController
+    Controller <|-- ProfileController
+    Controller <|-- RapatController
+    Controller <|-- TindakLanjutRapatController
+    Controller <|-- UserController
+
+    %% Models
+    class Role {
+        -id: unsignedBigInteger
+        -name: string
+        -description: string
+        +users() HasMany
+    }
+
+    class User {
+        -id: unsignedBigInteger
+        -name: string
+        -email: string
+        -password: string
+        -role_id: unsignedBigInteger
+        -jabatan: string
+        -komisi: string
+        -foto_ttd: string
+        -nip: string
+        +role() BelongsTo
+        +ketersediaanPribadi() HasMany
+        +notifications() BelongsToMany
+    }
+
+    class Rapat {
+        -id: unsignedBigInteger
+        -judul: string
+        -nomor: string
+        -hal: string
+        -sifat: string
+        -deskripsi: text
+        -tanggal: date
+        -jam_mulai: time
+        -jam_selesai: time
+        -lokasi: string
+        -jenis_rapat: string
+        -status: tinyInteger
+        -penandatangan_id: unsignedBigInteger
+        +pesertaRapat() HasMany
+        +penandatangan() BelongsTo
+    }
+
+    class PesertaRapat {
+        -id: unsignedBigInteger
+        -rapat_id: unsignedBigInteger
+        -user_id: unsignedBigInteger
+        +rapat() BelongsTo
+        +user() BelongsTo
+    }
+
+    class KetersediaanPribadi {
+        -id: unsignedBigInteger
+        -user_id: unsignedBigInteger
+        -tanggal: date
+        -waktu_mulai: time
+        -waktu_selesai: time
+        +user() BelongsTo
+    }
+
+    class Notulensi {
+        -id: unsignedBigInteger
+        -rapat_id: unsignedBigInteger
+        -isi: text
+        -status: string
+        -file_path: string
+        +rapat() BelongsTo
+    }
+
+    class PengajuanLogistik {
+        -id: unsignedBigInteger
+        -rapat_id: unsignedBigInteger
+        -user_id: unsignedBigInteger
+        -jenis_pengajuan: string
+        -keterangan: text
+        -status: string
+        +rapat() BelongsTo
+        +user() BelongsTo
+        +details() HasMany
+    }
+
+    class DetailLogistik {
+        -id: unsignedBigInteger
+        -pengajuan_logistik_id: unsignedBigInteger
+        -item: string
+        -jumlah: integer
+        -satuan: string
+        -keterangan: text
+        +logistik() BelongsTo
+    }
+
+    class TindakLanjutRapat {
+        -id: unsignedBigInteger
+        -rapat_id: unsignedBigInteger
+        -user_id: unsignedBigInteger
+        -deskripsi: text
+        -batas_waktu: date
+        -status: string
+        -progress: integer
+        +rapat() BelongsTo
+        +user() BelongsTo
+    }
+
+    class Notification {
+        -id: unsignedBigInteger
+        -title: string
+        -message: text
+        -type: string
+        +users() BelongsToMany
+    }
+
+    class UserNotification {
+        -id: unsignedBigInteger
+        -notification_id: unsignedBigInteger
+        -user_id: unsignedBigInteger
+        -is_read: boolean
+        -read_at: timestamp
+        +notification() BelongsTo
+        +user() BelongsTo
+    }
+
+    %% Model Relationships
+    Role "1" --> "0..*" User : has
+    User "1" --> "0..*" KetersediaanPribadi : has
+    Rapat "1" --> "0..*" PesertaRapat : has
+    User "1" --> "0..*" PesertaRapat : joins
+    Rapat "1" --> "0..*" Notulensi : generates
+    Rapat "1" --> "0..*" PengajuanLogistik : has
+    User "1" --> "0..*" PengajuanLogistik : submits
+    PengajuanLogistik "1" *-- "1..*" DetailLogistik : contains
+    Rapat "1" --> "0..*" TindakLanjutRapat : tracks
+    User "1" --> "0..*" TindakLanjutRapat : assigned to
+    Notification "1" --> "0..*" UserNotification : has
+    User "1" --> "0..*" UserNotification : receives
+    User "1" --> "0..*" Rapat : penandatangan
+
+    %% Controller Dependencies (Usage)
+    ApprovalController ..> Rapat : <<use>>
+    ApprovalController ..> Notulensi : <<use>>
+    ApprovalController ..> PengajuanLogistik : <<use>>
+    ApprovalController ..> Notification : <<use>>
+    DashboardController ..> Rapat : <<use>>
+    KetersediaanPribadiController ..> KetersediaanPribadi : <<use>>
+    NotificationController ..> Notification : <<use>>
+    NotificationController ..> UserNotification : <<use>>
+    NotulensiController ..> Notulensi : <<use>>
+    NotulensiController ..> Rapat : <<use>>
+    PengajuanLogistikController ..> PengajuanLogistik : <<use>>
+    PengajuanLogistikController ..> DetailLogistik : <<use>>
+    ProfileController ..> User : <<use>>
+    RapatController ..> Rapat : <<use>>
+    RapatController ..> PesertaRapat : <<use>>
+    TindakLanjutRapatController ..> TindakLanjutRapat : <<use>>
+    UserController ..> User : <<use>>
+    UserController ..> Role : <<use>>
+```
